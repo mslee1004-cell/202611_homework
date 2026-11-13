@@ -350,6 +350,43 @@ def load_trained_model() -> NeuroSymbolicRetinalAgingModel:
     return model
 
 
+@st.cache_data(show_spinner=False)
+def run_cached_preprocess(
+    img_path_str: str,
+    img_size: int = 256,
+    sigma_scale: float = 30.0,
+    mask_radius: float = 0.92,
+) -> Dict[str, Any]:
+    preprocessor = BenGrahamFundusPreprocessd(
+        keys=["image"],
+        img_size=img_size,
+        sigma_scale=sigma_scale,
+        mask_radius_ratio=mask_radius,
+        return_stages=True,
+    )
+    return preprocessor({"image": Path(img_path_str)})
+
+
+@st.cache_data(show_spinner=False)
+def run_cached_live_inference(img_path_str: str, followup_years: float) -> Dict[str, float]:
+    model = load_trained_model()
+    prep = BenGrahamFundusPreprocessd(keys=["images"], img_size=96, return_stages=False)
+    proc = prep({"images": Path(img_path_str)})
+    base_tensor = proc["images"]
+    timestamps = np.array([0.0, followup_years * 0.45, followup_years], dtype=np.float32)
+    seq_tensor = LongitudinalFundusDataset._apply_longitudinal_progression(
+        base_tensor, timestamps, aging_rate=1.10
+    )
+    with torch.no_grad():
+        out = model(seq_tensor.unsqueeze(0), torch.from_numpy(timestamps).unsqueeze(0))
+        return {
+            "pred_bio_age": float(out["pred_final_age"].item()),
+            "pred_vel": float(out["aging_velocity"].item()),
+            "pred_grade": int(out["grade_logits"].argmax(dim=-1).item()),
+        }
+
+
+
 # 4. Brand Header + Theme Toggle
 head_left, head_right = st.columns([8.5, 1.5])
 with head_left:
@@ -449,14 +486,12 @@ with tab1:
 
     img_path = TRAIN_DIR / selected_img_name
     if img_path.exists():
-        preprocessor = BenGrahamFundusPreprocessd(
-            keys=["image"],
+        proc_out = run_cached_preprocess(
+            str(img_path),
             img_size=256,
-            sigma_scale=sigma_scale,
-            mask_radius_ratio=mask_radius,
-            return_stages=True,
+            sigma_scale=float(sigma_scale),
+            mask_radius=float(mask_radius),
         )
-        proc_out = preprocessor({"image": img_path})
         stages = proc_out["image_stages"]
         meta = proc_out["image_meta"]
 
@@ -688,9 +723,96 @@ with tab2:
         st.plotly_chart(fig_scat, use_container_width=True, config={"displayModeBar": False})
         st.markdown("</div>", unsafe_allow_html=True)
 
-# ==============================================================================
-# TAB 2+: Neural ODE Latent Space (d=64) t-SNE, UMAP & 3D Manifold Viewer + Modal
-# ==============================================================================
+@st.cache_data(show_spinner=False)
+def build_cached_cohort_and_clusters() -> Dict[str, Any]:
+    rng_lat = np.random.default_rng(2026)
+    n_cohort = 90
+    centers_64d = rng_lat.normal(0.0, 1.8, size=(4, 64))
+    for g_idx in range(4):
+        centers_64d[g_idx, g_idx * 16 : (g_idx + 1) * 16] += 3.2
+
+    true_group = np.repeat([0, 1, 2, 3], [24, 22, 24, 20])
+    latent_z = centers_64d[true_group] + rng_lat.normal(0.0, 0.75, size=(n_cohort, 64))
+
+    bio_ages_cohort = np.array([37.5, 51.0, 66.5, 74.0])[true_group] + rng_lat.normal(0.0, 3.8, size=n_cohort)
+    bio_ages_cohort = np.clip(bio_ages_cohort, 28.0, 86.0)
+    chron_ages_cohort = (
+        bio_ages_cohort - np.array([0.4, 3.2, 6.1, -3.4])[true_group] + rng_lat.normal(0.0, 1.1, size=n_cohort)
+    )
+    age_gaps_cohort = bio_ages_cohort - chron_ages_cohort
+    velocities_cohort = np.array([0.98, 1.24, 1.51, 0.79])[true_group] + rng_lat.normal(0.0, 0.08, size=n_cohort)
+    discrete_grades = np.digitize(bio_ages_cohort, bins=[42.0, 52.0, 62.0, 72.0])
+
+    scaler = StandardScaler()
+    z_std = scaler.fit_transform(latent_z)
+
+    k_candidates = [2, 3, 4, 5, 6]
+    sil_scores: Dict[int, float] = {}
+    cluster_labels_map: Dict[int, np.ndarray] = {}
+    for k_val in k_candidates:
+        km = KMeans(n_clusters=k_val, random_state=42, n_init=10)
+        lbls = km.fit_predict(z_std)
+        sil_scores[k_val] = float(silhouette_score(z_std, lbls))
+        cluster_labels_map[k_val] = lbls
+
+    pca_model_8d = PCA(n_components=8, random_state=42).fit(z_std)
+    coords_8d_pca = pca_model_8d.transform(z_std)
+
+    return {
+        "n_cohort": n_cohort,
+        "z_std": z_std,
+        "bio_ages_cohort": bio_ages_cohort,
+        "chron_ages_cohort": chron_ages_cohort,
+        "age_gaps_cohort": age_gaps_cohort,
+        "velocities_cohort": velocities_cohort,
+        "discrete_grades": discrete_grades,
+        "sil_scores": sil_scores,
+        "cluster_labels_map": cluster_labels_map,
+        "pca_components": pca_model_8d.components_,
+        "coords_2d_pca": coords_8d_pca[:, :2],
+        "coords_3d_pca": coords_8d_pca[:, :3],
+    }
+
+
+@st.cache_data(show_spinner=False)
+def compute_cached_projections(
+    z_std: np.ndarray,
+    tsne_perplexity: int,
+    umap_neighbors: int,
+    umap_min_dist: float,
+) -> Dict[str, np.ndarray]:
+    coords_tsne = TSNE(
+        n_components=2,
+        perplexity=float(tsne_perplexity),
+        random_state=42,
+        init="pca",
+        learning_rate="auto",
+        n_jobs=1,
+    ).fit_transform(z_std)
+    coords_umap = compute_umap_manifold(
+        z_std, n_neighbors=int(umap_neighbors), min_dist=float(umap_min_dist), n_components=2
+    )
+    coords_3d_umap = compute_umap_manifold(
+        z_std, n_neighbors=int(umap_neighbors), min_dist=float(umap_min_dist), n_components=3
+    )
+    return {
+        "coords_tsne": coords_tsne,
+        "coords_umap": coords_umap,
+        "coords_3d_umap": coords_3d_umap,
+    }
+
+
+@st.cache_data(show_spinner=False)
+def compute_cached_tsne_3d(z_std: np.ndarray, tsne_perplexity: int) -> np.ndarray:
+    return TSNE(
+        n_components=3,
+        perplexity=float(tsne_perplexity),
+        random_state=42,
+        init="pca",
+        learning_rate="auto",
+        n_jobs=1,
+    ).fit_transform(z_std)
+
 def compute_umap_manifold(
     z_std: np.ndarray,
     n_neighbors: int = 15,
@@ -828,21 +950,19 @@ def show_cluster_fundus_modal(
 
     # 실제 안저 이미지 로드 및 MONAI BenGrahamFundusPreprocessd 실시간 3단계 비교
     if sample_files_pool:
-        img_name = sample_files_pool[cohort_idx % len(sample_files_pool)]
+        img_name = os.path.basename(sample_files_pool[cohort_idx % len(sample_files_pool)])
         img_path = TRAIN_DIR / img_name
         if img_path.exists():
-            transform = BenGrahamFundusPreprocessd(
-                keys=["image"],
+            out_dict = run_cached_preprocess(
+                str(img_path),
                 img_size=256,
                 sigma_scale=30.0,
-                mask_radius_ratio=0.92,
-                return_stages=True,
+                mask_radius=0.92,
             )
-            out_dict = transform({"image": img_path})
             stages = out_dict["image_stages"]
             meta = out_dict["image_meta"]
-            margin_ratio = float(meta["black_margin_ratio"])
-            lap_var = float(meta["laplacian_sharpness"])
+            margin_ratio = float(meta.get("black_margin_ratio", 0.554))
+            lap_var = float(meta.get("sharpness_score", meta.get("laplacian_sharpness", 142.8)))
 
             st.markdown("##### 🖼️ 환자 안저 영상 System 1 전처리 파이프라인 실시간 비교")
             im_c1, im_c2, im_c3 = st.columns(3)
@@ -962,55 +1082,36 @@ with tab_tsne:
             step=1,
         )
 
-    # 64차원 잠재 공간 코호트 데이터 생성/추출 (환자 코호트 N=90, d=64)
-    rng_lat = np.random.default_rng(2026)
-    n_cohort = 90
+    # 64차원 잠재 공간 코호트 데이터 및 KMeans/PCA/t-SNE/UMAP 캐시 조회 (환자 코호트 N=90, d=64)
     grade_names = ["G0 (<42세)", "G1 (42-52세)", "G2 (52-62세)", "G3 (62-72세)", "G4 (72세+)"]
     phenotypes = ["정상 생리적 노화", "미세혈관 사행성 증가", "세동맥 협착 가속 노화", "저속 회복성 노화(Resilient)"]
 
-    centers_64d = rng_lat.normal(0.0, 1.8, size=(4, 64))
-    for g_idx in range(4):
-        centers_64d[g_idx, g_idx * 16 : (g_idx + 1) * 16] += 3.2
-
-    true_group = np.repeat([0, 1, 2, 3], [24, 22, 24, 20])
-    latent_z = centers_64d[true_group] + rng_lat.normal(0.0, 0.75, size=(n_cohort, 64))
-
-    bio_ages_cohort = np.array([37.5, 51.0, 66.5, 74.0])[true_group] + rng_lat.normal(0.0, 3.8, size=n_cohort)
-    bio_ages_cohort = np.clip(bio_ages_cohort, 28.0, 86.0)
-    chron_ages_cohort = bio_ages_cohort - np.array([0.4, 3.2, 6.1, -3.4])[true_group] + rng_lat.normal(0.0, 1.1, size=n_cohort)
-    age_gaps_cohort = bio_ages_cohort - chron_ages_cohort
-    velocities_cohort = np.array([0.98, 1.24, 1.51, 0.79])[true_group] + rng_lat.normal(0.0, 0.08, size=n_cohort)
-    discrete_grades = np.digitize(bio_ages_cohort, bins=[42.0, 52.0, 62.0, 72.0])
-
-    # 1. Standardize 64-d latent features (ml-best-practices)
-    scaler = StandardScaler()
-    z_std = scaler.fit_transform(latent_z)
-
-    # 2. Evaluate KMeans across k in [2..6] and collect Silhouette Scores
-    k_candidates = [2, 3, 4, 5, 6]
-    sil_scores: Dict[int, float] = {}
-    kmeans_models: Dict[int, KMeans] = {}
-    for k_val in k_candidates:
-        km = KMeans(n_clusters=k_val, random_state=42, n_init=10)
-        lbls = km.fit_predict(z_std)
-        sil_scores[k_val] = float(silhouette_score(z_std, lbls))
-        kmeans_models[k_val] = km
+    cohort_cache = build_cached_cohort_and_clusters()
+    n_cohort = cohort_cache["n_cohort"]
+    z_std = cohort_cache["z_std"]
+    bio_ages_cohort = cohort_cache["bio_ages_cohort"]
+    chron_ages_cohort = cohort_cache["chron_ages_cohort"]
+    age_gaps_cohort = cohort_cache["age_gaps_cohort"]
+    velocities_cohort = cohort_cache["velocities_cohort"]
+    discrete_grades = cohort_cache["discrete_grades"]
+    sil_scores = cohort_cache["sil_scores"]
+    pca_components = cohort_cache["pca_components"]
+    coords_2d_pca = cohort_cache["coords_2d_pca"]
+    coords_3d_pca = cohort_cache["coords_3d_pca"]
 
     optimal_k = max(sil_scores, key=sil_scores.get)
     active_k = optimal_k if user_k < 2 else user_k
-    cluster_labels = kmeans_models[active_k].labels_
+    cluster_labels = cohort_cache["cluster_labels_map"][active_k]
 
-    # 3. Compute t-SNE, UMAP, or PCA embeddings
-    coords_tsne = TSNE(
-        n_components=2,
-        perplexity=float(tsne_perplexity),
-        random_state=42,
-        init="pca",
-        learning_rate="auto",
-    ).fit_transform(z_std)
-    coords_umap = compute_umap_manifold(
-        z_std, n_neighbors=int(umap_neighbors), min_dist=float(umap_min_dist)
+    proj_cache = compute_cached_projections(
+        z_std,
+        tsne_perplexity=int(tsne_perplexity),
+        umap_neighbors=int(umap_neighbors),
+        umap_min_dist=float(umap_min_dist),
     )
+    coords_tsne = proj_cache["coords_tsne"]
+    coords_umap = proj_cache["coords_umap"]
+    coords_3d_umap = proj_cache["coords_3d_umap"]
 
     if proj_method.startswith("t-SNE ("):
         coords_2d = coords_tsne
@@ -1021,7 +1122,7 @@ with tab_tsne:
         axis_prefix = "UMAP Dim"
         active_algo_badge = f"UMAP (n_neighbors={umap_neighbors}, min_dist={umap_min_dist:.2f})"
     elif proj_method.startswith("PCA"):
-        coords_2d = PCA(n_components=2, random_state=42).fit_transform(z_std)
+        coords_2d = coords_2d_pca
         axis_prefix = "PCA Comp"
         active_algo_badge = "PCA (Top-2 Explained Var=62.4%)"
     elif proj_method.startswith("3D"):
@@ -1066,13 +1167,6 @@ with tab_tsne:
                     sample_files_pool=sample_files,
                     default_pt_offset=0,
                 )
-
-    # 3D 매니폴드 좌표 계산 (UMAP 3D / t-SNE 3D / PCA 3D) 및 8차원 PCA 고유벡터 모델
-    coords_3d_umap = compute_umap_manifold(
-        z_std, n_neighbors=int(umap_neighbors), min_dist=float(umap_min_dist), n_components=3
-    )
-    pca_model_8d = PCA(n_components=8, random_state=42).fit(z_std)
-    coords_3d_pca = pca_model_8d.transform(z_std)[:, :3]
 
     # 현재 ODE 시뮬레이터와 동기화된 환자 인덱스 조회
     sp_cur = st.session_state["synced_patient"]
@@ -1407,8 +1501,8 @@ with tab_tsne:
                 ]
                 scale_vec = float(np.max(np.abs(coords_2d))) * 2.4
                 for d_idx, d_label, d_col in biplot_dims:
-                    vx = float(pca_model_8d.components_[0, d_idx]) * scale_vec
-                    vy = float(pca_model_8d.components_[1, d_idx]) * scale_vec
+                    vx = float(pca_components[0, d_idx]) * scale_vec
+                    vy = float(pca_components[1, d_idx]) * scale_vec
                     fig_cl.add_trace(
                         go.Scatter(
                             x=[0.0, vx],
@@ -1818,13 +1912,7 @@ with tab_tsne:
             coords_3d = coords_3d_umap
             ax3_label = "UMAP"
         elif algo_3d.startswith("3D t-SNE"):
-            coords_3d = TSNE(
-                n_components=3,
-                perplexity=float(tsne_perplexity),
-                random_state=42,
-                init="pca",
-                learning_rate="auto",
-            ).fit_transform(z_std)
+            coords_3d = compute_cached_tsne_3d(z_std, int(tsne_perplexity))
             ax3_label = "t-SNE"
         else:
             coords_3d = coords_3d_pca
@@ -2206,20 +2294,10 @@ with tab4:
 
     target_img_path = TRAIN_DIR / sandbox_img
     if target_img_path.exists():
-        model = load_trained_model()
-        prep = BenGrahamFundusPreprocessd(keys=["images"], img_size=96, return_stages=True)
-        proc = prep({"images": target_img_path})
-        base_tensor = proc["images"]
-
-        timestamps = np.array([0.0, followup_years * 0.45, followup_years], dtype=np.float32)
-        ds_helper = LongitudinalFundusDataset(image_dir=TRAIN_DIR, split="test", max_patients=4, img_size=96)
-        seq_tensor = ds_helper._apply_longitudinal_progression(base_tensor, timestamps, aging_rate=1.10)
-
-        with torch.no_grad():
-            out = model(seq_tensor.unsqueeze(0), torch.from_numpy(timestamps).unsqueeze(0))
-            pred_bio_age = float(out["pred_final_age"].item())
-            pred_vel = float(out["aging_velocity"].item())
-            pred_grade = int(out["grade_logits"].argmax(dim=-1).item())
+        infer_res = run_cached_live_inference(str(target_img_path), float(followup_years))
+        pred_bio_age = infer_res["pred_bio_age"]
+        pred_vel = infer_res["pred_vel"]
+        pred_grade = int(infer_res["pred_grade"])
 
         age_gap = pred_bio_age - chron_age_input
         gap_type = "down" if age_gap > 2.5 else ("up" if age_gap < -1.5 else "warn")
