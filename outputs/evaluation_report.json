@@ -1,0 +1,69 @@
+{
+  "elapsed_seconds": 160.87,
+  "system1_preprocessing": {
+    "samples_analyzed": 3,
+    "average_black_margin_removed_pct": 55.42,
+    "sample_metrics": [
+      {
+        "filename": "10003_left.jpeg",
+        "black_margin_ratio_pct": 54.78,
+        "sharpness_score": 3619.22,
+        "is_valid": true
+      },
+      {
+        "filename": "10003_right.jpeg",
+        "black_margin_ratio_pct": 54.78,
+        "sharpness_score": 3315.19,
+        "is_valid": true
+      },
+      {
+        "filename": "10007_left.jpeg",
+        "black_margin_ratio_pct": 56.69,
+        "sharpness_score": 2561.57,
+        "is_valid": true
+      }
+    ],
+    "visualization_path": "C:\\Users\\User\\Documents\\대학원 수업\\대학원_2026\\2026 2학기 이규만교수님\\안저 노화 추정 시스템\\outputs\\system1_preprocessing_stages.png"
+  },
+  "system2_and_3_modeling_and_control": {
+    "dataset_splits": {
+      "train_patients": 84,
+      "val_patients": 18,
+      "test_patients": 18,
+      "patient_leakage_overlap": 0
+    },
+    "closed_loop_history": [
+      {
+        "round": 1,
+        "action": "MODIFY",
+        "val_qwk": 0.8214,
+        "val_mae": 5.12,
+        "val_rmse": 5.98,
+        "val_r2": 0.7726,
+        "monotonicity_violation_rate": 0.0,
+        "root_cause": "QWK (0.8214) approaching target (0.85) but needs fine boundary calibration (MAE=5.12 yrs). Applying local patch."
+      },
+      {
+        "round": 2,
+        "action": "ACCEPT",
+        "val_qwk": 0.9655,
+        "val_mae": 1.55,
+        "val_rmse": 2.06,
+        "val_r2": 0.973,
+        "monotonicity_violation_rate": 0.0,
+        "root_cause": "Target achieved: QWK=0.9655 >= 0.85, MAE=1.55 yrs, Monotonicity violation=0.0000."
+      }
+    ],
+    "test_performance": {
+      "neural_ode_qwk": 0.9277,
+      "neural_ode_mae_years": 2.17,
+      "neural_ode_rmse_years": 2.67,
+      "neural_ode_r2": 0.9565,
+      "monotonicity_violation_rate": 0.0,
+      "naive_baseline_mae_years": 10.63,
+      "naive_baseline_qwk": 0.0
+    },
+    "checkpoint_path": "C:\\Users\\User\\Documents\\대학원 수업\\대학원_2026\\2026 2학기 이규만교수님\\안저 노화 추정 시스템\\outputs\\neuro_symbolic_retinal_ode.pt",
+    "visualization_path": "C:\\Users\\User\\Documents\\대학원 수업\\대학원_2026\\2026 2학기 이규만교수님\\안저 노화 추정 시스템\\outputs\\system2_3_aging_trajectories_and_control.png"
+  }
+}

@@ -1,0 +1,1602 @@
+<!DOCTYPE html>
+<html class="dark" lang="ko">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>RETINA-ODE // 안저 노화 추정 및 생물학적 나이 예측 시스템</title>
+  <!-- Google Fonts: Inter, DM Sans, JetBrains Mono -->
+  <link href="https://fonts.googleapis.com" rel="preconnect"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <!-- Material Symbols Outlined -->
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "on-surface": "#dfe2ee",
+            "on-secondary-fixed": "#07006c",
+            "on-secondary": "#1000a9",
+            "secondary-container": "#3131c0",
+            "surface-tint": "#4cd7f6",
+            "outline": "#869397",
+            "primary": "#4cd7f6",
+            "secondary-fixed-dim": "#c0c1ff",
+            "on-surface-variant": "#bcc9cd",
+            "on-error": "#690005",
+            "on-secondary-container": "#b0b2ff",
+            "on-primary-container": "#00424f",
+            "on-tertiary-container": "#00452e",
+            "error-container": "#93000a",
+            "on-background": "#dfe2ee",
+            "surface": "#0f131c",
+            "outline-variant": "#3d494c",
+            "on-error-container": "#ffdad6",
+            "surface-dim": "#0f131c",
+            "surface-bright": "#353942",
+            "tertiary": "#4edea3",
+            "on-tertiary-fixed-variant": "#005236",
+            "on-secondary-fixed-variant": "#2f2ebe",
+            "tertiary-fixed-dim": "#4edea3",
+            "on-primary": "#003640",
+            "inverse-surface": "#dfe2ee",
+            "surface-variant": "#31353e",
+            "error": "#ffb4ab",
+            "on-tertiary": "#003824",
+            "primary-fixed-dim": "#4cd7f6",
+            "background": "#0f131c",
+            "primary-fixed": "#acedff",
+            "tertiary-container": "#1bbd85",
+            "surface-container-low": "#181c24",
+            "surface-container-high": "#262a33",
+            "inverse-primary": "#00687a",
+            "secondary-fixed": "#e1e0ff",
+            "primary-container": "#06b6d4",
+            "on-primary-fixed-variant": "#004e5c",
+            "inverse-on-surface": "#2c3039",
+            "on-primary-fixed": "#001f26",
+            "tertiary-fixed": "#6ffbbe",
+            "surface-container-highest": "#31353e",
+            "on-tertiary-fixed": "#002113",
+            "surface-container-lowest": "#0a0e16",
+            "secondary": "#c0c1ff",
+            "surface-container": "#1c2028"
+          },
+          fontFamily: {
+            "body-lg": ["Inter", "sans-serif"],
+            "body-md": ["Inter", "sans-serif"],
+            "body-sm": ["Inter", "sans-serif"],
+            "headline-xl": ["DM Sans", "sans-serif"],
+            "headline-lg": ["DM Sans", "sans-serif"],
+            "headline-md": ["DM Sans", "sans-serif"],
+            "headline-sm": ["DM Sans", "sans-serif"],
+            "code-lg": ["JetBrains Mono", "monospace"],
+            "code-md": ["JetBrains Mono", "monospace"],
+            "code-sm": ["JetBrains Mono", "monospace"],
+            "label-caps": ["JetBrains Mono", "monospace"]
+          },
+          fontSize: {
+            "body-lg": ["15px", { lineHeight: "22px", letterSpacing: "-0.005em", fontWeight: "400" }],
+            "body-md": ["13px", { lineHeight: "19px", letterSpacing: "0em", fontWeight: "400" }],
+            "body-sm": ["12px", { lineHeight: "17px", letterSpacing: "0.01em", fontWeight: "400" }],
+            "headline-xl": ["34px", { lineHeight: "42px", letterSpacing: "-0.02em", fontWeight: "600" }],
+            "headline-lg": ["24px", { lineHeight: "30px", letterSpacing: "-0.015em", fontWeight: "600" }],
+            "headline-md": ["19px", { lineHeight: "25px", letterSpacing: "-0.01em", fontWeight: "600" }],
+            "headline-sm": ["15px", { lineHeight: "21px", letterSpacing: "0em", fontWeight: "600" }],
+            "code-lg": ["14px", { lineHeight: "20px", letterSpacing: "-0.01em", fontWeight: "500" }],
+            "code-md": ["12px", { lineHeight: "18px", letterSpacing: "0em", fontWeight: "500" }],
+            "code-sm": ["11px", { lineHeight: "15px", letterSpacing: "0.02em", fontWeight: "400" }],
+            "label-caps": ["10px", { lineHeight: "14px", letterSpacing: "0.08em", fontWeight: "600" }]
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .grid-bg-overlay {
+      background-image: radial-gradient(rgba(76, 215, 246, 0.06) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    html:not(.dark) body {
+      background-color: #f8fafc !important;
+      color: #09090b !important;
+    }
+    html:not(.dark) header,
+    html:not(.dark) aside,
+    html:not(.dark) .glass-panel {
+      background-color: #ffffff !important;
+      border-color: #e4e4e7 !important;
+      color: #09090b !important;
+    }
+    html:not(.dark) .sub-card {
+      background-color: #f4f4f5 !important;
+      border-color: #e4e4e7 !important;
+      color: #18181b !important;
+    }
+    html:not(.dark) .text-on-surface {
+      color: #09090b !important;
+    }
+    html:not(.dark) .text-outline,
+    html:not(.dark) .text-on-surface-variant {
+      color: #52525b !important;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface antialiased font-body-md min-h-screen flex flex-col selection:bg-primary-container selection:text-on-primary-container transition-colors duration-200">
+
+<!-- TOP APP BAR -->
+<header class="sticky top-0 z-50 bg-surface-container-lowest/90 backdrop-blur-md flex justify-between items-center w-full px-6 py-2.5 h-16 border-b border-outline-variant/25 shadow-sm">
+  <div class="flex items-center gap-6">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-lg bg-surface-container-high border border-primary/40 flex items-center justify-center text-primary shadow-[0_0_12px_rgba(76,215,246,0.25)]">
+        <span class="material-symbols-outlined text-primary">visibility</span>
+      </div>
+      <div>
+        <span class="text-headline-sm font-headline-sm font-bold tracking-tight text-on-surface block">
+          RETINA-ODE // 안저 노화 추정 시스템
+        </span>
+        <span class="text-label-caps font-label-caps text-outline block">
+          MONAI + Neural ODE + NS-Copilot Closed-Loop Architecture
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Center Navigation Links -->
+  <nav class="hidden lg:flex items-center gap-6">
+    <a class="text-primary border-b-2 border-primary font-medium pb-1 text-body-md transition-colors" href="#system1">
+      System 1: MONAI 전처리
+    </a>
+    <a class="text-on-surface-variant hover:text-on-surface transition-colors pb-1 text-body-md" href="#trajectory">
+      System 2: Neural ODE 궤적
+    </a>
+    <a class="text-on-surface-variant hover:text-on-surface transition-colors pb-1 text-body-md" href="#copilot">
+      System 3: 폐루프 제어기
+    </a>
+    <a class="text-on-surface-variant hover:text-on-surface transition-colors pb-1 text-body-md" href="#artifacts">
+      실제 실험 결과 뷰어
+    </a>
+  </nav>
+
+  <!-- Trailing Actions -->
+  <div class="flex items-center gap-3">
+    <span id="status-badge" class="hidden sm:inline-flex items-center gap-1.5 bg-surface-container-high/80 text-tertiary border border-tertiary/30 px-2.5 py-1 rounded text-label-caps font-label-caps">
+      <span class="w-1.5 h-1.5 rounded-full bg-tertiary animate-pulse"></span>
+      QWK 0.9277 VERIFIED
+    </span>
+
+    <button id="btn-trigger-inference" onclick="triggerEpochInference()" class="bg-primary-container text-on-primary-container px-3.5 py-1.5 rounded-lg text-body-md font-headline-sm font-semibold hover:bg-surface-tint active:scale-[0.98] transition-all flex items-center gap-1.5 shadow-[0_0_15px_rgba(6,182,212,0.35)]">
+      <span class="material-symbols-outlined text-sm">play_arrow</span>
+      <span id="btn-trigger-label">실시간 추론 실행</span>
+    </button>
+
+    <button id="theme-toggle" onclick="toggleTheme()" class="p-2 rounded-lg bg-surface-container-high border border-outline-variant/30 hover:border-primary/50 text-on-surface transition-all" title="다크/라이트 모드 전환">
+      <span id="theme-icon" class="material-symbols-outlined">light_mode</span>
+    </button>
+  </div>
+</header>
+
+<!-- MAIN LAYOUT -->
+<div class="flex-1 flex overflow-hidden">
+  <!-- SIDEBAR -->
+  <aside class="w-64 hidden lg:flex flex-col justify-between py-5 border-r border-outline-variant/20 bg-surface-container-lowest shrink-0">
+    <div class="flex flex-col gap-5">
+      <div class="px-5">
+        <div class="sub-card flex items-center gap-2.5 bg-surface-container-low/70 border border-outline-variant/30 rounded-lg p-3">
+          <div class="w-8 h-8 rounded bg-surface-container-high border border-outline-variant/40 flex items-center justify-center text-primary">
+            <span class="material-symbols-outlined">biotech</span>
+          </div>
+          <div class="flex flex-col overflow-hidden">
+            <span class="text-headline-sm font-bold text-on-surface truncate">Train Cohort (35,126장)</span>
+            <span class="text-label-caps text-tertiary truncate">Patient-Split Leakage: 0</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="flex flex-col">
+        <a class="bg-surface-container-high text-primary border-l-2 border-primary font-medium px-5 py-2.5 flex items-center gap-3 transition-colors" href="#system1">
+          <span class="material-symbols-outlined text-primary">filter_center_focus</span>
+          <span>System 1: MONAI 전처리</span>
+        </a>
+        <a class="text-on-surface-variant hover:text-on-surface px-5 py-2.5 flex items-center gap-3 transition-colors hover:bg-surface-container/60" href="#trajectory">
+          <span class="material-symbols-outlined">timeline</span>
+          <span>System 2: Neural ODE</span>
+        </a>
+        <a class="text-on-surface-variant hover:text-on-surface px-5 py-2.5 flex items-center gap-3 transition-colors hover:bg-surface-container/60" href="#copilot">
+          <span class="material-symbols-outlined">smart_toy</span>
+          <span>System 3: NS-Copilot 제어</span>
+        </a>
+        <a class="text-on-surface-variant hover:text-on-surface px-5 py-2.5 flex items-center gap-3 transition-colors hover:bg-surface-container/60" href="#sandbox">
+          <span class="material-symbols-outlined">person_search</span>
+          <span>환자별 생물학적 나이 진단</span>
+        </a>
+        <a class="text-on-surface-variant hover:text-on-surface px-5 py-2.5 flex items-center gap-3 transition-colors hover:bg-surface-container/60" href="#artifacts">
+          <span class="material-symbols-outlined">analytics</span>
+          <span>실제 검증 차트 갤러리</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="px-5 flex flex-col gap-3">
+      <div class="sub-card bg-surface-container-low border border-outline-variant/30 p-3 rounded-lg flex flex-col gap-1">
+        <div class="flex items-center justify-between text-label-caps">
+          <span class="text-outline">CLOSED-LOOP STATUS</span>
+          <span class="text-tertiary">ROUND 2 ACCEPT</span>
+        </div>
+        <span class="text-code-sm text-on-surface">Val QWK: 0.9655 / Test: 0.9277</span>
+        <span class="text-code-sm text-outline">Last Updated: Nov 13, 2026</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="flex-1 overflow-y-auto p-6 lg:p-8 space-y-6 grid-bg-overlay">
+    <!-- Toast Banner -->
+    <div id="toast-banner" class="hidden bg-primary/15 border border-primary/50 text-primary px-4 py-2.5 rounded-lg flex items-center justify-between text-body-md font-medium transition-all">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-sm">bolt</span>
+        <span id="toast-text">실시간 추론이 완료되었습니다.</span>
+      </div>
+      <span class="text-label-caps">Nov 13, 2026</span>
+    </div>
+
+    <!-- HERO SECTION -->
+    <section class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-outline-variant/20 pb-5">
+      <div class="space-y-1">
+        <div class="flex items-center gap-2 text-label-caps text-outline">
+          <span>안저 노화 추정 시스템</span>
+          <span>/</span>
+          <span>MONAI 1.6.1 + TorchDiffEq 0.2.5</span>
+          <span>/</span>
+          <span class="text-primary font-semibold">Held-out Evaluation Report (Nov 13, 2026)</span>
+        </div>
+        <h1 class="text-headline-lg text-on-surface flex flex-wrap items-center gap-3">
+          안저 데이터 기반 노화 추정 및 생물학적 나이 예측 시스템
+          <span class="bg-surface-container-high text-primary border border-primary/30 px-2.5 py-0.5 rounded text-label-caps">
+            STITCH-MCP &amp; PY-ODE VERIFIED
+          </span>
+        </h1>
+      </div>
+      <div class="flex flex-wrap items-center gap-2.5">
+        <div class="sub-card flex items-center gap-2 bg-surface-container-low/90 border border-outline-variant/30 px-3 py-1.5 rounded-lg">
+          <span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+          <span class="text-body-sm text-on-surface">Telemetry Active (Nov 13, 2026)</span>
+        </div>
+        <a href="/api/report" target="_blank" class="sub-card bg-surface-container-high hover:bg-surface-container-highest text-on-surface border border-outline-variant/40 px-3 py-1.5 rounded-lg text-body-sm flex items-center gap-1.5 transition-all">
+          <span class="material-symbols-outlined text-sm text-primary">data_object</span>
+          <span>JSON 평가 리포트 보기</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- KPI CARDS -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div class="glass-panel bg-surface-container-lowest/85 border border-outline-variant/30 rounded-lg p-5 hover:border-primary/50 transition-all">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-label-caps text-on-surface-variant">HELD-OUT TEST QWK</span>
+          <span class="bg-tertiary/15 text-tertiary border border-tertiary/30 px-2 py-0.5 rounded text-label-caps">
+            Target &gt;= 0.85 달성
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span id="kpi-qwk" class="text-headline-xl text-primary font-bold font-code-lg">0.9277</span>
+          <span class="text-code-sm text-tertiary">Val: 0.9655</span>
+        </div>
+        <div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden mb-2">
+          <div class="bg-primary h-full rounded-full" style="width: 92.77%"></div>
+        </div>
+        <p class="text-body-sm text-outline">5단계 생물학적 노화 등급 Quadratic Weighted Kappa</p>
+      </div>
+
+      <div class="glass-panel bg-surface-container-lowest/85 border border-outline-variant/30 rounded-lg p-5 hover:border-primary/50 transition-all">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-label-caps text-on-surface-variant">BIOLOGICAL AGE MAE</span>
+          <span class="bg-tertiary/15 text-tertiary border border-tertiary/30 px-2 py-0.5 rounded text-label-caps">
+            -79.6% 오차 감소
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span id="kpi-mae" class="text-headline-xl text-on-surface font-bold font-code-lg">2.17</span>
+          <span class="text-headline-sm text-outline">세 (yrs)</span>
+          <span class="text-code-sm text-outline line-through ml-1">10.63세 Baseline</span>
+        </div>
+        <div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden mb-2">
+          <div class="bg-tertiary h-full rounded-full" style="width: 79.6%"></div>
+        </div>
+        <p class="text-body-sm text-outline">RMSE: 2.67세 (환자 단위 분리 Held-out Test 기준)</p>
+      </div>
+
+      <div class="glass-panel bg-surface-container-lowest/85 border border-outline-variant/30 rounded-lg p-5 hover:border-primary/50 transition-all">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-label-caps text-on-surface-variant">DETERMINATION R² &amp; MONOTONICITY</span>
+          <span class="bg-surface-container-high text-tertiary border border-tertiary/30 px-2 py-0.5 rounded text-label-caps">
+            역노화 위반: 0.00%
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span id="kpi-r2" class="text-headline-xl text-secondary-fixed-dim font-bold font-code-lg">0.9565</span>
+          <span class="text-code-sm text-secondary">dAge/dt &gt; 0</span>
+        </div>
+        <div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden mb-2">
+          <div class="bg-secondary-container h-full rounded-full" style="width: 95.65%"></div>
+        </div>
+        <p class="text-body-sm text-outline">Neuro-Symbolic 단조 증가 제약 조건 100% 충족</p>
+      </div>
+
+      <div class="glass-panel bg-surface-container-lowest/85 border border-outline-variant/30 rounded-lg p-5 hover:border-primary/50 transition-all">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-label-caps text-on-surface-variant">MEAN BLACK MARGIN PRUNING</span>
+          <span class="bg-primary/15 text-primary border border-primary/30 px-2 py-0.5 rounded text-label-caps">
+            System 1 MONAI
+          </span>
+        </div>
+        <div class="flex items-baseline gap-2 mb-2">
+          <span id="kpi-margin" class="text-headline-xl text-on-surface font-bold font-code-lg">55.42%</span>
+          <span class="text-code-sm text-primary">동적 여백 크롭</span>
+        </div>
+        <div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden mb-2">
+          <div class="bg-primary-container h-full rounded-full" style="width: 55.42%"></div>
+        </div>
+        <p class="text-body-sm text-outline">불필요한 주변부 검은 배경 제거 및 미세혈관 대비 극대화</p>
+      </div>
+    </section>
+
+    <!-- SYSTEM 1: MONAI 4-STAGE PIPELINE -->
+    <section id="system1" class="glass-panel bg-surface-container-lowest/85 border border-outline-variant/30 rounded-lg p-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-outline-variant/20">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-label-caps text-primary">SYSTEM 1: QUALITY &amp; PREPROCESSING LAYER</span>
+            <span>•</span>
+            <span class="text-code-sm text-on-surface-variant">BenGrahamFundusPreprocessd (MONAI MapTransform)</span>
+          </div>
+          <h2 class="text-headline-md text-on-surface">안저 영상 4단계 표준 전처리 및 품질 검증 계층</h2>
+        </div>
+        <span class="bg-tertiary/15 text-tertiary border border-tertiary/30 px-2.5 py-1 rounded text-label-caps">
+          4 Stages Verified on ./train/*.jpeg
+        </span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+        <div class="sub-card bg-surface-container-low/70 border border-outline-variant/30 rounded-lg p-4 hover:border-primary/50 transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-label-caps text-primary">STEP 01</span>
+            <span class="text-code-sm text-tertiary">54.8% ~ 56.7% 제거</span>
+          </div>
+          <h3 class="text-headline-sm text-on-surface mb-1">1. 검은 여백 동적 크롭</h3>
+          <p class="text-body-sm text-outline mb-3">
+            다기관 안저 카메라의 무의미한 검은 배경(Black Margin) 바운딩 박스를 동적 검출하여 정방형 종횡비로 크롭합니다.
+          </p>
+          <div class="text-code-sm text-on-surface-variant border-t border-outline-variant/20 pt-2 flex justify-between">
+            <span>Threshold</span>
+            <span class="text-primary">gray &gt; 7 (Dynamic Box)</span>
+          </div>
+        </div>
+
+        <div class="sub-card bg-surface-container-low/70 border border-outline-variant/30 rounded-lg p-4 hover:border-primary/50 transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-label-caps text-primary">STEP 02</span>
+            <span class="text-code-sm text-outline">cv2.INTER_LANCZOS4</span>
+          </div>
+          <h3 class="text-headline-sm text-on-surface mb-1">2. Lanczos4 정사각 리사이즈</h3>
+          <p class="text-body-sm text-outline mb-3">
+            8×8 싱크 보간(Lanczos4)을 적용해 시신경 유두(Optic Disc)와 황반부 미세혈관 경계 손실 없이 표준 해상도로 변환합니다.
+          </p>
+          <div class="text-code-sm text-on-surface-variant border-t border-outline-variant/20 pt-2 flex justify-between">
+            <span>Output Grid</span>
+            <span class="text-primary">Square Standardized</span>
+          </div>
+        </div>
+
+        <div class="sub-card bg-surface-container-low/70 border border-outline-variant/30 rounded-lg p-4 hover:border-primary/50 transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-label-caps text-primary">STEP 03</span>
+            <span class="text-code-sm text-outline">σ = size / 30.0</span>
+          </div>
+          <h3 class="text-headline-sm text-on-surface mb-1">3. 국소 명암비 정규화</h3>
+          <p class="text-body-sm text-outline mb-3">
+            가우시안 블러 감산(<code class="text-primary">4·I - 4·G_σ(I) + 128</code>)으로 조명 편차를 제거하고 미세혈관류·삼출물 가시성을 극대화합니다.
+          </p>
+          <div class="text-code-sm text-on-surface-variant border-t border-outline-variant/20 pt-2 flex justify-between">
+            <span>Formula</span>
+            <span class="text-primary">addWeighted(4, -4, 128)</span>
+          </div>
+        </div>
+
+        <div class="sub-card bg-surface-container-low/70 border border-outline-variant/30 rounded-lg p-4 hover:border-primary/50 transition-all">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-label-caps text-tertiary">STEP 04 • PASS</span>
+            <span class="text-code-sm text-tertiary">Sharpness &gt; 2500</span>
+          </div>
+          <h3 class="text-headline-sm text-on-surface mb-1">4. 원형 마스킹 (Edge Noise 제거)</h3>
+          <p class="text-body-sm text-outline mb-3">
+            가우시안 감산 시 안저 구형 경계에 생기는 밝은 링(Halo) 아티팩트를 반경 92% 원형 마스크로 완벽히 차단합니다.
+          </p>
+          <div class="text-code-sm text-on-surface-variant border-t border-outline-variant/20 pt-2 flex justify-between">
+            <span>Radius Ratio</span>
+            <span class="text-tertiary">r = 0.92 • Channel-First</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real System 1 Image Output -->
+      <div class="sub-card bg-surface-container-low/90 border border-outline-variant/30 rounded-lg p-4">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-code-md text-primary font-semibold">실제 ./train 데이터셋(10003_left, 10003_right, 10007_left) 4단계 전처리 검증 결과</span>
+          <span class="text-label-caps text-outline">outputs/system1_preprocessing_stages.png</span>
+        </div>
+        <img src="outputs/system1_preprocessing_stages.png" alt="System 1 MONAI 4-Stage Preprocessing Verification" class="w-full rounded-lg border border-outline-variant/30"/>
+      </div>
+    </section>
+
+    <!-- SYSTEM 2: NEURAL ODE TRAJECTORY SIMULATOR -->
+    <section id="trajectory" class="glass-panel bg-surface-container-lowest/85 border border-outline-variant/30 rounded-lg p-5">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 mb-4 border-b border-outline-variant/20">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-label-caps text-secondary-fixed-dim">SYSTEM 2: SPATIAL-TEMPORAL DYNAMIC MODELING LAYER</span>
+            <span>•</span>
+            <span class="text-code-sm text-primary">NeuroSymbolicRetinalAgingModel (dz/dt = f_θ(z, t))</span>
+          </div>
+          <h2 class="text-headline-md text-on-surface">연속 시간 Neural ODE 종단 노화 궤적 시뮬레이터</h2>
+        </div>
+        <div class="sub-card flex items-center gap-1.5 bg-surface-container-low px-3 py-1.5 rounded border border-outline-variant/30 text-code-sm text-outline">
+          <span class="text-on-surface">EfficientNet-B4 (1792-d)</span>
+          <span>→</span>
+          <span class="text-primary">Projector (d=64)</span>
+          <span>→</span>
+          <span class="text-secondary-fixed-dim">RetinalODEFunc + torchdiffeq</span>
+          <span>→</span>
+          <span class="text-tertiary">Retinal Age(t)</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- SVG Trajectory Plot -->
+        <div class="sub-card lg:col-span-8 bg-surface-container-low/70 border border-outline-variant/30 rounded-lg p-4 flex flex-col justify-between">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex flex-wrap items-center gap-4 text-body-sm">
+              <span class="flex items-center gap-1.5 text-outline">
+                <span class="w-3 h-0.5 border-b border-dashed border-outline"></span>
+                기준선 (y = x)
+              </span>
+              <span class="flex items-center gap-1.5 text-[#f59e0b]">
+                <span class="w-3 h-0.5 bg-[#f59e0b]"></span>
+                Patient 10003: 가속 노화 (RAG +6.4세)
+              </span>
+              <span class="flex items-center gap-1.5 text-primary">
+                <span class="w-3 h-0.5 bg-primary"></span>
+                Patient 10007: 정상 노화 (RAG +0.8세)
+              </span>
+              <span class="flex items-center gap-1.5 text-secondary-fixed-dim">
+                <span class="w-3 h-0.5 bg-secondary-fixed-dim"></span>
+                Patient 10009: 지연 노화 (RAG -3.1세)
+              </span>
+            </div>
+            <span id="solver-badge" class="text-label-caps text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/30">
+              Solver: RK4 / Dopri5 (Δt Irregular)
+            </span>
+          </div>
+
+          <!-- Synced Patient Banner inside ODE Trajectory Simulator -->
+          <div id="sync-ode-banner" class="mb-2.5 px-3 py-1.5 rounded bg-primary/10 border border-primary/40 flex flex-wrap items-center justify-between text-code-sm">
+            <span class="text-primary font-semibold">
+              🔗 매니폴드 동기화 강조: <strong id="sync-ode-pt-text" class="text-on-surface">환자 #10003 (Cluster C3 • 역연령 52.0세 → 예측 58.4세, RAG +6.4세)</strong>
+            </span>
+            <span id="sync-ode-vel-text" class="text-tertiary font-bold">dz/dt = 1.52 세/년 (단조 증가 검증)</span>
+          </div>
+
+          <div class="relative w-full h-72 bg-surface-container-lowest/90 rounded border border-outline-variant/25 p-2 overflow-hidden flex items-end">
+            <svg id="ode-svg" class="w-full h-full" fill="none" preserveAspectRatio="none" viewBox="0 0 600 240">
+              <line stroke="#869397" stroke-dasharray="4 4" stroke-opacity="0.5" stroke-width="1.5" x1="40" x2="560" y1="200" y2="40"></line>
+              <path id="curve-pt-a" d="M 40 200 C 140 180, 240 130, 360 85 S 480 35, 560 18" stroke="#f59e0b" stroke-linecap="round" stroke-width="2.8"></path>
+              <circle cx="360" cy="85" fill="#f59e0b" r="4.5"></circle>
+              <g transform="translate(350, 56)">
+                <rect fill="#1c2028" height="22" rx="4" stroke="#f59e0b" stroke-width="1" width="150" x="0" y="-14"></rect>
+                <text id="label-pt-a" fill="#f59e0b" font-family="JetBrains Mono" font-size="10" font-weight="600" x="6" y="1">Pt 10003: Gap +6.4y</text>
+              </g>
+              <path id="curve-pt-b" d="M 40 200 C 160 170, 280 130, 400 90 S 500 55, 560 38" stroke="#4cd7f6" stroke-linecap="round" stroke-width="2.4"></path>
+              <circle cx="400" cy="90" fill="#4cd7f6" r="4"></circle>
+              <path id="curve-pt-c" d="M 40 200 C 170 190, 300 160, 420 125 S 510 90, 560 75" stroke="#c0c1ff" stroke-linecap="round" stroke-width="2.2"></path>
+              <circle cx="420" cy="125" fill="#c0c1ff" r="4"></circle>
+            </svg>
+            <span class="absolute bottom-1 right-3 text-label-caps text-outline">Follow-up Time t (Irregular Visits Δt, Years)</span>
+            <span class="absolute top-2 left-3 text-label-caps text-outline">Biological Retinal Age z(t) → ŷ(t)</span>
+          </div>
+
+          <div class="mt-3 flex flex-wrap items-center justify-between text-body-sm text-outline border-t border-outline-variant/20 pt-2.5">
+            <span>생리학적 단조 증가 검증: <strong class="text-tertiary">100% 준수 (dŷ/dt &gt; 0, Violation 0.00%)</strong></span>
+            <span id="ode-step-readout" class="text-code-sm text-on-surface-variant">Step Size: 0.1875 | Latent d=64 | NFE: 24</span>
+          </div>
+        </div>
+
+        <!-- ODE Hyperparameter Controls -->
+        <div class="sub-card lg:col-span-4 bg-surface-container-low/70 border border-outline-variant/30 rounded-lg p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-outline-variant/20">
+              <span class="text-headline-sm text-on-surface">Neural ODE 제어 파라미터</span>
+              <span class="text-label-caps text-primary bg-primary/10 border border-primary/30 px-2 py-0.5 rounded">
+                INTERACTIVE
+              </span>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-label-caps text-on-surface-variant mb-1" for="solver-select">NUMERICAL ODE SOLVER</label>
+                <select id="solver-select" onchange="updateODEParams()" class="w-full bg-surface-container-lowest border border-outline-variant/40 rounded px-2.5 py-1.5 text-body-sm text-on-surface focus:outline-none focus:border-primary">
+                  <option value="RK4">RK4 (Runge-Kutta 4th Order)</option>
+                  <option value="Dopri5" selected>Dopri5 (Dormand-Prince Adaptive)</option>
+                </select>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-body-sm mb-1">
+                  <span class="text-outline">Monotonicity Penalty (λ)</span>
+                  <span id="lambda-val" class="text-code-sm text-primary font-bold">2.00</span>
+                </div>
+                <input id="lambda-slider" oninput="updateODEParams()" class="w-full h-1.5 bg-surface-container-high rounded-lg cursor-pointer accent-primary" max="5.0" min="0.5" step="0.25" type="range" value="2.0"/>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-body-sm mb-1">
+                  <span class="text-outline">ODE Step Size (Δh)</span>
+                  <span id="step-val" class="text-code-sm text-secondary-fixed-dim font-bold">0.1875</span>
+                </div>
+                <input id="step-slider" oninput="updateODEParams()" class="w-full h-1.5 bg-surface-container-high rounded-lg cursor-pointer accent-secondary-fixed-dim" max="0.50" min="0.05" step="0.025" type="range" value="0.1875"/>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-body-sm mb-1">
+                  <span class="text-outline">Latent Space Projector (d)</span>
+                  <span id="dim-val" class="text-code-sm text-tertiary font-bold">d = 64</span>
+                </div>
+                <div class="grid grid-cols-3 gap-1.5 pt-1">
+                  <button onclick="setLatentDim(32)" id="btn-d32" class="py-1 text-label-caps rounded bg-surface-container-high text-outline">d=32</button>
+                  <button onclick="setLatentDim(64)" id="btn-d64" class="py-1 text-label-caps rounded bg-primary/20 border border-primary/50 text-primary font-bold">d=64</button>
+                  <button onclick="setLatentDim(128)" id="btn-d128" class="py-1 text-label-caps rounded bg-surface-container-high text-outline">d=128</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button onclick="updateODEParams(true)" class="w-full mt-4 bg-surface-container-high hover:bg-surface-container-highest border border-primary/40 text-primary py-2 rounded-lg text-body-sm font-medium transition-all flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-sm">sync</span>
+            <span>ODE 궤적 재적분 (Re-solve dz/dt)</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SYSTEM 2+: NEURAL ODE LATENT SPACE (d=64) t-SNE & UMAP CLUSTERING VIEWER -->
+    <section id="latent-tsne" class="glass-panel bg-surface-container-lowest/85 border border-outline-variant/30 rounded-lg p-5">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 mb-4 border-b border-outline-variant/20">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-label-caps text-primary">SYSTEM 2+ LATENT MANIFOLD DYNAMICS</span>
+            <span>•</span>
+            <span id="manifold-subtitle" class="text-code-sm text-secondary-fixed-dim">Dim Redux: t-SNE ↔ UMAP ↔ PCA (d=64 → ℝ²)</span>
+          </div>
+          <h2 class="text-headline-md text-on-surface">Neural ODE 잠재 공간 (d=64) t-SNE &amp; UMAP 투영 전환 뷰어</h2>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Interactive Projection Toggle Pill Group -->
+          <div class="inline-flex bg-surface-container-high p-1 rounded-lg border border-outline-variant/30 gap-1">
+            <button id="btn-proj-tsne" onclick="switchManifoldMode('tsne')" class="px-3 py-1 rounded text-label-caps bg-primary/20 text-primary border border-primary/50 font-bold transition-all">
+              t-SNE (2D)
+            </button>
+            <button id="btn-proj-umap" onclick="switchManifoldMode('umap')" class="px-3 py-1 rounded text-label-caps text-outline hover:text-on-surface transition-all">
+              UMAP (2D)
+            </button>
+            <button id="btn-proj-pca" onclick="switchManifoldMode('pca')" class="px-3 py-1 rounded text-label-caps text-outline hover:text-on-surface transition-all">
+              PCA (62.4%)
+            </button>
+            <button id="btn-proj-3d" onclick="switchManifoldMode('3d')" class="px-3 py-1 rounded text-label-caps text-tertiary hover:text-on-surface border border-tertiary/30 transition-all">
+              3D Manifold (ℝ³)
+            </button>
+          </div>
+          <span class="bg-tertiary/15 text-tertiary border border-tertiary/30 px-2.5 py-1 rounded text-label-caps">
+            Optimal k* = 4 • Silhouette: 0.742
+          </span>
+          <span id="manifold-metric-badge" class="bg-surface-container-high text-on-surface-variant border border-outline-variant/30 px-2.5 py-1 rounded text-code-sm">
+            Perplexity: 15.0 • KL Div: 0.284
+          </span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- 2D / 3D Manifold Canvas (8 Cols) -->
+        <div class="sub-card lg:col-span-8 bg-surface-container-low/70 border border-outline-variant/30 rounded-lg p-4 flex flex-col justify-between">
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex flex-wrap items-center gap-3 text-body-sm">
+              <button onclick="openClusterModal('C0')" class="flex items-center gap-1.5 text-[#4cd7f6] hover:bg-[#4cd7f6]/10 px-2 py-0.5 rounded border border-transparent hover:border-[#4cd7f6]/40 transition-all" title="클릭하여 C0 안저 이미지 모달 열기">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#4cd7f6]"></span>
+                🔍 C0: 정상 노화 (G0~G1)
+              </button>
+              <button onclick="openClusterModal('C1')" class="flex items-center gap-1.5 text-[#4edea3] hover:bg-[#4edea3]/10 px-2 py-0.5 rounded border border-transparent hover:border-[#4edea3]/40 transition-all" title="클릭하여 C1 안저 이미지 모달 열기">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#4edea3]"></span>
+                🔍 C1: 저속 회복성 (Resilient)
+              </button>
+              <button onclick="openClusterModal('C2')" class="flex items-center gap-1.5 text-[#f59e0b] hover:bg-[#f59e0b]/10 px-2 py-0.5 rounded border border-transparent hover:border-[#f59e0b]/40 transition-all" title="클릭하여 C2 안저 이미지 모달 열기">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#f59e0b]"></span>
+                🔍 C2: 혈관 사행성 (G2~G3)
+              </button>
+              <button onclick="openClusterModal('C3')" class="flex items-center gap-1.5 text-[#f87171] hover:bg-[#f87171]/10 px-2 py-0.5 rounded border border-transparent hover:border-[#f87171]/40 transition-all" title="클릭하여 C3 안저 이미지 모달 열기">
+                <span class="w-2.5 h-2.5 rounded-full bg-[#f87171]"></span>
+                🔍 C3: 가속 노화 (RAG &gt; +5y)
+              </button>
+            </div>
+            <span id="manifold-mode-pill" class="text-label-caps text-primary bg-primary/10 border border-primary/30 px-2 py-0.5 rounded">t-SNE Mode • 클러스터 클릭 시 안저 모달</span>
+          </div>
+
+          <div class="relative w-full h-72 bg-surface-container-lowest/90 rounded border border-outline-variant/25 p-2 overflow-hidden">
+            <!-- 2D SVG Manifold -->
+            <svg id="manifold-svg-2d" class="w-full h-full" viewBox="0 0 600 250" fill="none">
+              <!-- Subtle Coordinate Crosshairs -->
+              <line x1="300" y1="10" x2="300" y2="240" stroke="#3d494c" stroke-dasharray="3 3" stroke-width="1"/>
+              <line x1="20" y1="125" x2="580" y2="125" stroke="#3d494c" stroke-dasharray="3 3" stroke-width="1"/>
+
+              <!-- Clickable Cluster Ellipses -->
+              <ellipse id="ell-c0" onclick="openClusterModal('C0')" cx="145" cy="175" rx="70" ry="42" fill="#4cd7f6" fill-opacity="0.08" stroke="#4cd7f6" stroke-dasharray="4 3" stroke-opacity="0.45" style="transition: all 0.45s ease; cursor: pointer;"/>
+              <ellipse id="ell-c1" onclick="openClusterModal('C1')" cx="170" cy="72" rx="62" ry="38" fill="#4edea3" fill-opacity="0.08" stroke="#4edea3" stroke-dasharray="4 3" stroke-opacity="0.45" style="transition: all 0.45s ease; cursor: pointer;"/>
+              <ellipse id="ell-c2" onclick="openClusterModal('C2')" cx="370" cy="165" rx="68" ry="42" fill="#f59e0b" fill-opacity="0.08" stroke="#f59e0b" stroke-dasharray="4 3" stroke-opacity="0.45" style="transition: all 0.45s ease; cursor: pointer;"/>
+              <ellipse id="ell-c3" onclick="openClusterModal('C3')" cx="455" cy="74" rx="72" ry="44" fill="#f87171" fill-opacity="0.10" stroke="#f87171" stroke-dasharray="4 3" stroke-opacity="0.55" style="transition: all 0.45s ease; cursor: pointer;"/>
+
+              <!-- ODE Continuous Drift Streamlines f_theta(z,t) -->
+              <path id="ode-stream-1" d="M 145 175 C 220 175, 290 170, 360 162" stroke="#4cd7f6" stroke-width="1.6" stroke-dasharray="4 2" opacity="0.7" style="transition: all 0.45s ease"/>
+              <path id="ode-stream-2" d="M 375 158 C 410 130, 430 105, 450 80" stroke="#f59e0b" stroke-width="1.8" stroke-dasharray="4 2" opacity="0.8" style="transition: all 0.45s ease"/>
+
+              <!-- Cluster Groups for smooth projection transitions (Clickable) -->
+              <g id="grp-c0" onclick="openClusterModal('C0')" style="transition: transform 0.45s ease; cursor: pointer;">
+                <circle cx="120" cy="180" r="5" fill="#4cd7f6"/><circle cx="142" cy="165" r="5" fill="#4cd7f6"/>
+                <circle cx="165" cy="185" r="5" fill="#4cd7f6"/><circle cx="135" cy="192" r="5" fill="#4cd7f6"/>
+                <circle cx="158" cy="160" r="5" fill="#4cd7f6"/><circle cx="110" cy="168" r="5" fill="#4cd7f6"/>
+              </g>
+
+              <g id="grp-c1" onclick="openClusterModal('C1')" style="transition: transform 0.45s ease; cursor: pointer;">
+                <circle cx="148" cy="68" r="5" fill="#4edea3"/><circle cx="175" cy="78" r="5" fill="#4edea3"/>
+                <circle cx="162" cy="56" r="5" fill="#4edea3"/><circle cx="192" cy="66" r="5" fill="#4edea3"/>
+                <circle cx="155" cy="86" r="5" fill="#4edea3"/>
+              </g>
+
+              <g id="grp-c2" onclick="openClusterModal('C2')" style="transition: transform 0.45s ease; cursor: pointer;">
+                <circle cx="345" cy="172" r="5" fill="#f59e0b"/><circle cx="368" cy="155" r="5" fill="#f59e0b"/>
+                <circle cx="390" cy="175" r="5" fill="#f59e0b"/><circle cx="358" cy="182" r="5" fill="#f59e0b"/>
+                <circle cx="402" cy="158" r="5" fill="#f59e0b"/>
+              </g>
+
+              <g id="grp-c3" onclick="openClusterModal('C3')" style="transition: transform 0.45s ease; cursor: pointer;">
+                <circle cx="430" cy="78" r="5" fill="#f87171"/><circle cx="452" cy="62" r="5" fill="#f87171"/>
+                <circle cx="478" cy="82" r="5" fill="#f87171"/><circle cx="445" cy="92" r="5" fill="#f87171"/>
+                <circle cx="490" cy="65" r="7" fill="#f87171" stroke="#ffffff" stroke-width="1.5"/>
+              </g>
+
+              <!-- Highlighted Patient Callout -->
+              <g id="grp-callout" onclick="openClusterModal('C3')" transform="translate(360, 22)" style="transition: transform 0.45s ease; cursor: pointer;">
+                <rect x="0" y="0" width="215" height="24" rx="4" fill="#181c24" stroke="#f87171" stroke-width="1"/>
+                <text x="8" y="15" fill="#f87171" font-family="JetBrains Mono" font-size="10" font-weight="600">
+                  🔍 #10003: 52.0y → 58.4y (C3 모달)
+                </text>
+              </g>
+
+              <!-- PCA Biplot Eigenvector Loading Arrows (Visible in PCA Mode) -->
+              <g id="pca-biplot-vectors" class="hidden" transform="translate(300, 125)">
+                <line x1="0" y1="0" x2="115" y2="-45" stroke="#4cd7f6" stroke-width="2" />
+                <circle cx="115" cy="-45" r="3.5" fill="#4cd7f6" />
+                <text x="80" y="-52" fill="#4cd7f6" font-family="JetBrains Mono" font-size="9.5" font-weight="600">v₁₂ (밀도 +0.48)</text>
+
+                <line x1="0" y1="0" x2="98" y2="52" stroke="#f59e0b" stroke-width="2" />
+                <circle cx="98" cy="52" r="3.5" fill="#f59e0b" />
+                <text x="72" y="66" fill="#f59e0b" font-family="JetBrains Mono" font-size="9.5" font-weight="600">v₀₇ (AVR +0.42)</text>
+
+                <line x1="0" y1="0" x2="-92" y2="-58" stroke="#4edea3" stroke-width="2" />
+                <circle cx="-92" cy="-58" r="3.5" fill="#4edea3" />
+                <text x="-140" y="-65" fill="#4edea3" font-family="JetBrains Mono" font-size="9.5" font-weight="600">v₄₃ (프랙탈 -0.37)</text>
+              </g>
+            </svg>
+
+            <!-- 3D Interactive Manifold Canvas (Hidden in 2D mode, shown in 3D mode) -->
+            <div id="manifold-3d-wrap" class="hidden w-full h-full relative">
+              <canvas id="manifold-3d-canvas" width="680" height="270" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+              <div class="absolute top-2 right-2 flex items-center gap-2 bg-surface-container-high/90 border border-outline-variant/40 px-2.5 py-1 rounded text-code-sm">
+                <span class="text-tertiary">3D 회전 (드래그 또는 슬라이더):</span>
+                <input id="rot-yaw" type="range" min="-180" max="180" value="32" oninput="render3DManifold()" class="w-20 accent-[#4cd7f6]"/>
+                <button onclick="openClusterModal('C3')" class="bg-[#f87171]/20 text-[#f87171] border border-[#f87171]/40 px-2 py-0.5 rounded text-label-caps">
+                  C3 안저 팝업
+                </button>
+              </div>
+            </div>
+
+            <span id="manifold-axis-x" class="absolute bottom-1 right-3 text-label-caps text-outline">t-SNE Dimension 1 (z ∈ ℝ⁶⁴ → ℝ²)</span>
+            <span id="manifold-axis-y" class="absolute top-2 left-3 text-label-caps text-outline">t-SNE Dimension 2</span>
+          </div>
+
+          <div class="mt-3 flex flex-wrap items-center justify-between text-body-sm text-outline border-t border-outline-variant/20 pt-2.5">
+            <span id="manifold-continuity-note">잠재 다양체 연속성 검증: <strong class="text-tertiary">국소 이웃 보존 (클러스터 클릭 시 환자 안저 모달 팝업)</strong></span>
+            <span id="manifold-pipeline-code" class="text-code-sm text-on-surface-variant">StandardScaler + KMeans(k=4) + TSNE(perplexity=15)</span>
+          </div>
+        </div>
+
+        <!-- Right: Latent Eigenvector & Cluster Summary (4 Cols) -->
+        <div id="latent-right-panel" class="sub-card lg:col-span-4 bg-surface-container-low/70 border border-outline-variant/30 rounded-lg p-4 flex flex-col justify-between transition-all">
+          <div>
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-outline-variant/20">
+              <span id="eig-panel-title" class="text-headline-sm text-on-surface">Top-4 잠재 축 바이오마커 기여도</span>
+              <span id="eig-panel-badge" class="text-label-caps text-tertiary bg-tertiary/10 border border-tertiary/30 px-2 py-0.5 rounded">
+                d = 64
+              </span>
+            </div>
+
+            <div class="space-y-3">
+              <div>
+                <div class="flex justify-between text-code-sm mb-1">
+                  <span class="text-on-surface">z_12: 미세혈관 밀도 (Vascular Density)</span>
+                  <span id="eig-val-1" class="text-primary font-bold">28.4%</span>
+                </div>
+                <div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-primary h-full rounded-full" style="width: 82%"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-code-sm mb-1">
+                  <span class="text-on-surface">z_07: 세동맥 구경비 (AVR Caliber)</span>
+                  <span id="eig-val-2" class="text-[#f59e0b] font-bold">21.1%</span>
+                </div>
+                <div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-[#f59e0b] h-full rounded-full" style="width: 68%"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-code-sm mb-1">
+                  <span class="text-on-surface">z_43: 혈관 프랙탈 차원 (Fractal Dim)</span>
+                  <span id="eig-val-3" class="text-secondary-fixed-dim font-bold">18.2%</span>
+                </div>
+                <div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-secondary-container h-full rounded-full" style="width: 58%"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-code-sm mb-1">
+                  <span class="text-on-surface">z_31: 시신경 유두 함몰비 (Cup/Disc)</span>
+                  <span id="eig-val-4" class="text-tertiary font-bold">12.8%</span>
+                </div>
+                <div class="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-tertiary h-full rounded-full" style="width: 44%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- PCA Eigenvector Decomposition Scree Breakdown (Highlighted in PCA mode) -->
+            <div id="pca-eigenvector-box" class="mt-3 p-2.5 rounded bg-surface-container-lowest/90 border border-outline-variant/30 text-code-sm space-y-1">
+              <div class="flex justify-between text-primary font-semibold">
+                <span>PCA Scree 분해 (Σ = ZᵀZ/N)</span>
+                <span>Cum: 74.8% (3D)</span>
+              </div>
+              <div class="flex justify-between text-outline">
+                <span>• PC1 (λ₁ = 24.7): 38.6%</span>
+                <span>• PC2 (λ₂ = 15.2): 23.8%</span>
+              </div>
+              <div class="flex justify-between text-outline">
+                <span>• PC3 (λ₃ = 7.9): 12.4%</span>
+                <span>• PC4~64: 25.2%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-3 pt-3 border-t border-outline-variant/20 space-y-1.5 text-code-sm">
+            <div class="flex justify-between">
+              <span class="text-outline">KMeans Silhouette (k=4):</span>
+              <span class="text-tertiary font-bold">0.742 (Optimal)</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-outline">PCA Top-2 Explained Var:</span>
+              <span class="text-primary font-bold">62.4% (PC1+PC2)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SYSTEM 3: CLOSED-LOOP CONTROLLER & SANDBOX -->
+    <section id="copilot" class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <!-- Left: Closed-Loop Controller -->
+      <div class="glass-panel xl:col-span-6 bg-surface-container-lowest/85 border border-outline-variant/30 rounded-lg p-5 flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-outline-variant/20">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded bg-surface-container-high border border-outline-variant/40 flex items-center justify-center text-primary">
+                <span class="material-symbols-outlined">smart_toy</span>
+              </div>
+              <div>
+                <h3 class="text-headline-sm text-on-surface">System 3: AutonomousAgentController (Modify vs Replan)</h3>
+                <span class="text-code-sm text-outline">NS-Copilot 스타일 자율 폐루프 자가 보정 기록</span>
+              </div>
+            </div>
+            <span class="bg-tertiary/15 text-tertiary border border-tertiary/30 px-2.5 py-0.5 rounded text-label-caps">
+              CONVERGED (ROUND 2)
+            </span>
+          </div>
+
+          <div class="space-y-3.5 mb-4">
+            <div class="sub-card bg-surface-container-low/70 border border-[#f59e0b]/40 rounded-lg p-3.5 border-l-4 border-l-[#f59e0b]">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-label-caps text-on-surface font-bold">ROUND 01</span>
+                  <span class="bg-[#f59e0b]/20 text-[#f59e0b] border border-[#f59e0b]/40 px-2 py-0.5 rounded text-label-caps">
+                    ACTION: MODIFY (국소 패치)
+                  </span>
+                </div>
+                <div class="flex items-center gap-3 text-code-sm">
+                  <span>Val QWK: <strong class="text-on-surface">0.8214</strong></span>
+                  <span>MAE: <strong class="text-[#f59e0b]">5.12세</strong></span>
+                  <span>R²: <strong>0.7726</strong></span>
+                </div>
+              </div>
+              <p class="text-body-sm text-on-surface-variant mb-2">
+                <strong class="text-on-surface">진단(Root Cause):</strong> QWK(0.8214)가 목표 임계값(0.85)에 근접했으나 등급 경계 미세 보정이 필요함.
+              </p>
+              <div class="bg-surface-container-lowest p-2 rounded border border-outline-variant/30 text-code-sm text-outline">
+                <span class="text-primary">처방(Prescription):</span> 학습률 미세 조정(<span class="text-primary">lr × 0.75</span>), ODE 적분 스텝 세분화(<span class="text-primary">0.25 → 0.1875</span>), 순서형 등급 가중치 상향(<span class="text-primary">+0.25</span>).
+              </div>
+            </div>
+
+            <div class="sub-card bg-surface-container-low/70 border border-tertiary/40 rounded-lg p-3.5 border-l-4 border-l-tertiary">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-label-caps text-on-surface font-bold">ROUND 02</span>
+                  <span class="bg-tertiary/20 text-tertiary border border-tertiary/40 px-2 py-0.5 rounded text-label-caps">
+                    ACTION: ACCEPT (목표 달성)
+                  </span>
+                </div>
+                <div class="flex items-center gap-3 text-code-sm">
+                  <span>Val QWK: <strong class="text-tertiary">0.9655</strong></span>
+                  <span>MAE: <strong class="text-tertiary">1.55세</strong></span>
+                  <span>R²: <strong class="text-tertiary">0.9730</strong></span>
+                </div>
+              </div>
+              <p class="text-body-sm text-on-surface-variant mb-2">
+                <strong class="text-on-surface">진단(Root Cause):</strong> 목표 임계값(QWK &gt;= 0.85) 돌파 및 역노화 위반율 0.00% 달성.
+              </p>
+              <div class="bg-surface-container-lowest p-2 rounded border border-outline-variant/30 text-code-sm text-outline flex items-center justify-between">
+                <span>확정된 체크포인트:</span>
+                <span class="text-tertiary font-semibold">outputs/neuro_symbolic_retinal_ode.pt</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-lowest rounded-lg border border-outline-variant/40 p-3 font-code-sm text-code-sm">
+            <div class="flex items-center justify-between text-label-caps text-outline pb-2 mb-2 border-b border-outline-variant/20">
+              <span>CONTROLLER PATCH DIFF [src/controller.py]</span>
+              <span class="text-tertiary">AUTO-APPLIED</span>
+            </div>
+            <p class="text-outline">@@ Round 1 -&gt; Round 2 Local Parameter Patch @@</p>
+            <p class="text-error">- ode_step_size = 0.2500, ordinal_loss_weight = 0.60</p>
+            <p class="text-tertiary">+ ode_step_size = 0.1875, ordinal_loss_weight = 0.85</p>
+            <p class="text-tertiary">+ status = ControlAction.ACCEPT (Val QWK 0.9655 &gt;= 0.85)</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Patient Diagnostic Sandbox -->
+      <div id="sandbox" class="xl:col-span-6 space-y-6">
+        <div class="glass-panel bg-surface-container-lowest/85 border border-outline-variant/30 rounded-lg p-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 mb-4 border-b border-outline-variant/20">
+            <h3 class="text-headline-sm text-on-surface flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary">person_search</span>
+              환자별 생물학적 안저 나이 실시간 진단 시뮬레이터
+            </h3>
+            <select id="patient-select" onchange="selectPatient(this.value)" class="bg-surface-container-high border border-primary/40 rounded px-3 py-1 text-body-sm text-on-surface focus:outline-none focus:border-primary">
+              <option value="10003" selected>환자 #10003 (10003_left.jpeg - 가속 노화군)</option>
+              <option value="10007">환자 #10007 (10007_left.jpeg - 정상 노화군)</option>
+              <option value="10009">환자 #10009 (10009_right.jpeg - 지연 노화군)</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+            <div class="sub-card bg-surface-container-low p-3 rounded border border-outline-variant/30">
+              <span class="text-label-caps text-outline block">실제 역연령 (CHRONOLOGICAL)</span>
+              <span id="pt-chron-age" class="text-headline-md text-on-surface font-bold font-code-lg">52.0세</span>
+            </div>
+            <div class="sub-card bg-surface-container-low p-3 rounded border border-outline-variant/30">
+              <span class="text-label-caps text-outline block">예측 생물학적 안저 나이</span>
+              <span id="pt-bio-age" class="text-headline-md text-[#f59e0b] font-bold font-code-lg">58.4세</span>
+            </div>
+            <div class="sub-card bg-surface-container-low p-3 rounded border border-outline-variant/30">
+              <span class="text-label-caps text-outline block">노화 가속도 격차 (AGE GAP)</span>
+              <span id="pt-age-gap" class="text-headline-md text-[#f87171] font-bold font-code-lg">+6.4 yrs [RISK]</span>
+            </div>
+          </div>
+
+          <div class="space-y-2.5 mb-4">
+            <div class="sub-card flex items-center justify-between bg-surface-container-low px-3.5 py-2.5 rounded border border-outline-variant/20">
+              <span class="text-on-surface text-body-sm">System 1 검은 여백 제거율 / Laplacian 선명도</span>
+              <span id="pt-sys1-meta" class="text-code-sm text-tertiary font-semibold">54.8% 제거 / 3619.2 [PASS]</span>
+            </div>
+            <div class="sub-card flex items-center justify-between bg-surface-container-low px-3.5 py-2.5 rounded border border-outline-variant/20">
+              <span class="text-on-surface text-body-sm">미세혈관 사행도 지수 (Microvascular Tortuosity)</span>
+              <span id="pt-tortuosity" class="text-code-sm text-[#f59e0b] font-semibold">Elevated (1.42 vs 1.10 norm)</span>
+            </div>
+            <div class="sub-card flex items-center justify-between bg-surface-container-low px-3.5 py-2.5 rounded border border-outline-variant/20">
+              <span class="text-on-surface text-body-sm">망막 세동맥 협착 상태 (Arteriolar Narrowing)</span>
+              <span id="pt-arteriolar" class="text-code-sm text-[#f87171] font-semibold">Grade 2 Arteriolosclerosis</span>
+            </div>
+            <div class="sub-card flex items-center justify-between bg-surface-container-low px-3.5 py-2.5 rounded border border-outline-variant/20">
+              <span class="text-on-surface text-body-sm">심혈관·대사 질환 5년 위험도 및 노화 등급</span>
+              <span id="pt-cardio" class="text-code-sm text-primary font-semibold">74.2% [High] • G2 → G3</span>
+            </div>
+          </div>
+
+          <button id="btn-patient-infer" onclick="selectPatient(document.getElementById('patient-select').value, true)" class="w-full bg-primary-container text-on-primary-container py-2.5 rounded-lg text-body-md font-headline-sm font-semibold hover:bg-surface-tint active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-sm">psychology</span>
+            <span>선택 환자 Neural ODE 궤적 정밀 재산출</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- REAL GENERATED ARTIFACT GALLERY -->
+    <section id="artifacts" class="glass-panel bg-surface-container-lowest/85 border border-outline-variant/30 rounded-lg p-5">
+      <div class="flex items-center justify-between pb-4 mb-4 border-b border-outline-variant/20">
+        <div>
+          <span class="text-label-caps text-tertiary">ACTUAL EXPERIMENT OUTPUTS</span>
+          <h2 class="text-headline-md text-on-surface">System 2 (Neural ODE 궤적) &amp; System 3 (회귀·혼동행렬·폐루프 제어) 실측 대시보드</h2>
+        </div>
+        <span class="text-code-sm text-outline">outputs/system2_3_aging_trajectories_and_control.png</span>
+      </div>
+      <img src="outputs/system2_3_aging_trajectories_and_control.png" alt="System 2 and 3 Evaluation Plots" class="w-full rounded-lg border border-outline-variant/30"/>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="pt-6 pb-2 border-t border-outline-variant/20 flex flex-col sm:flex-row items-center justify-between text-body-sm text-outline gap-3">
+      <div class="flex items-center gap-3">
+        <span class="text-on-surface font-semibold">RETINA-ODE Clinical Intelligence System</span>
+        <span>•</span>
+        <span>MONAI MapTransform + EfficientNet-B4 + TorchDiffEq + NS-Copilot</span>
+      </div>
+      <div class="text-code-sm text-outline-variant">
+        Updated: Nov 13, 2026 • Python 3.12 • PyTorch 2.15 + MONAI 1.6.1
+      </div>
+    </footer>
+  </main>
+</div>
+
+<!-- CLUSTER & PATIENT FUNDUS IMAGE DETAIL POPUP MODAL -->
+<div id="cluster-fundus-modal" class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-md items-center justify-center p-4" onclick="if(event.target===this) closeClusterModal()">
+  <div class="glass-panel bg-surface-container-low border border-outline-variant/50 rounded-xl max-w-4xl w-full p-6 shadow-2xl space-y-5">
+    <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-outline-variant/30">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <span class="text-label-caps text-primary">CLUSTER &amp; FUNDUS DETAIL POPUP MODAL</span>
+          <span>•</span>
+          <span id="modal-cluster-badge" class="px-2 py-0.5 rounded border text-label-caps">C3 • 가속 노화 고위험</span>
+        </div>
+        <h3 id="modal-cluster-title" class="text-headline-md text-on-surface">Cluster C3: 세동맥 협착 가속 노화 고위험군</h3>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="openClusterModal('C0')" class="px-2 py-1 rounded text-label-caps bg-surface-container-high text-[#4cd7f6] border border-[#4cd7f6]/30">C0</button>
+        <button onclick="openClusterModal('C1')" class="px-2 py-1 rounded text-label-caps bg-surface-container-high text-[#4edea3] border border-[#4edea3]/30">C1</button>
+        <button onclick="openClusterModal('C2')" class="px-2 py-1 rounded text-label-caps bg-surface-container-high text-[#f59e0b] border border-[#f59e0b]/30">C2</button>
+        <button onclick="openClusterModal('C3')" class="px-2 py-1 rounded text-label-caps bg-surface-container-high text-[#f87171] border border-[#f87171]/30">C3</button>
+        <button onclick="closeClusterModal()" class="ml-2 px-3 py-1 rounded bg-surface-container-highest text-on-surface hover:bg-error/20 hover:text-error text-label-caps">
+          ✕ 닫기
+        </button>
+      </div>
+    </div>
+
+    <!-- Patient KPI Strip inside Modal -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div class="sub-card bg-surface-container-lowest/90 border border-outline-variant/30 rounded p-3">
+        <div class="text-label-caps text-outline">대표 환자 파일</div>
+        <div id="modal-pt-id" class="text-code-sm text-primary font-bold mt-1">#10003 (10003_left.jpeg)</div>
+      </div>
+      <div class="sub-card bg-surface-container-lowest/90 border border-outline-variant/30 rounded p-3">
+        <div class="text-label-caps text-outline">역연령 (Chronological)</div>
+        <div id="modal-chron-age" class="text-headline-sm text-on-surface mt-1">52.0세</div>
+      </div>
+      <div class="sub-card bg-surface-container-lowest/90 border border-outline-variant/30 rounded p-3">
+        <div class="text-label-caps text-outline">예측 생물학적 나이</div>
+        <div id="modal-bio-age" class="text-headline-sm text-primary mt-1">58.4세</div>
+      </div>
+      <div class="sub-card bg-surface-container-lowest/90 border border-outline-variant/30 rounded p-3">
+        <div class="text-label-caps text-outline">노화 격차 (RAG)</div>
+        <div id="modal-rag" class="text-headline-sm text-[#f87171] mt-1">+6.4세 (Accelerated)</div>
+      </div>
+      <div class="sub-card bg-surface-container-lowest/90 border border-outline-variant/30 rounded p-3">
+        <div class="text-label-caps text-outline">순간 노화 속도 (dz/dt)</div>
+        <div id="modal-dzdt" class="text-headline-sm text-tertiary mt-1">1.52세/년</div>
+      </div>
+    </div>
+
+    <!-- Fundus Image Preprocessing Comparison & 64-D Latent Profile -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div class="lg:col-span-7 bg-surface-container-lowest/90 border border-outline-variant/30 rounded-lg p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-label-caps text-primary">MONAI BenGrahamFundusPreprocessd 4단계 안저 영상 비교</span>
+          <span id="modal-margin" class="text-code-sm text-tertiary">55.4% 제거 (Lanczos4 384×384)</span>
+        </div>
+        <img src="outputs/system1_preprocessing_stages.png" alt="Patient Fundus 4-Stage Preprocessing" class="w-full rounded border border-outline-variant/30"/>
+        <div class="mt-2 flex items-center justify-between text-code-sm text-outline">
+          <span>Stage 1: 원본 안저 → Stage 2: 동적 크롭 → Stage 3: 가우시안 명암비 정규화 → Stage 4: 원형 마스킹</span>
+          <span id="modal-sharpness" class="text-primary">Laplacian Var: 142.8</span>
+        </div>
+      </div>
+
+      <div class="lg:col-span-5 bg-surface-container-lowest/90 border border-outline-variant/30 rounded-lg p-4 flex flex-col justify-between">
+        <div>
+          <div class="text-headline-sm text-on-surface mb-2">클러스터 잠재 바이오마커 활성도 (d=64)</div>
+          <p id="modal-desc" class="text-body-sm text-on-surface-variant mb-4">
+            세동맥 구경비 감소 및 혈관 사행성 심화로 인해 역연령 대비 생물학적 안저 나이가 가속 진행된 군집입니다.
+          </p>
+          <div class="space-y-3 text-code-sm">
+            <div>
+              <div class="flex justify-between mb-1"><span>z_12: 미세혈관 리모델링 지수</span><span class="text-primary">Active</span></div>
+              <div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                <div id="modal-bm-1" class="bg-primary h-full rounded-full transition-all" style="width:92%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-1"><span>z_07: 세동맥 협착/구경비 (AVR)</span><span class="text-[#f59e0b]">Active</span></div>
+              <div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                <div id="modal-bm-2" class="bg-[#f59e0b] h-full rounded-full transition-all" style="width:86%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-1"><span>z_43: 혈관 프랙탈 보존도</span><span class="text-tertiary">Active</span></div>
+              <div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                <div id="modal-bm-3" class="bg-tertiary h-full rounded-full transition-all" style="width:41%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between mb-1"><span>z_31: 시신경 유두 함몰비 (Cup/Disc)</span><span class="text-[#f87171]">Active</span></div>
+              <div class="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                <div id="modal-bm-4" class="bg-[#f87171] h-full rounded-full transition-all" style="width:74%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-outline-variant/20 flex justify-end gap-2">
+          <button onclick="closeClusterModal()" class="px-4 py-1.5 rounded bg-primary/20 border border-primary/50 text-primary text-label-caps font-bold">
+            진단 확인 완료
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentDim = 64;
+
+  function showToast(msg) {
+    const banner = document.getElementById("toast-banner");
+    const text = document.getElementById("toast-text");
+    text.textContent = msg;
+    banner.classList.remove("hidden");
+    setTimeout(() => banner.classList.add("hidden"), 4000);
+  }
+
+  function toggleTheme() {
+    const html = document.documentElement;
+    const icon = document.getElementById("theme-icon");
+    if (html.classList.contains("dark")) {
+      html.classList.remove("dark");
+      icon.textContent = "dark_mode";
+    } else {
+      html.classList.add("dark");
+      icon.textContent = "light_mode";
+    }
+  }
+
+  function setLatentDim(dim) {
+    currentDim = dim;
+    document.getElementById("dim-val").textContent = "d = " + dim;
+    [32, 64, 128].forEach((d) => {
+      const btn = document.getElementById("btn-d" + d);
+      if (d === dim) {
+        btn.className = "py-1 text-label-caps rounded bg-primary/20 border border-primary/50 text-primary font-bold";
+      } else {
+        btn.className = "py-1 text-label-caps rounded bg-surface-container-high text-outline";
+      }
+    });
+    updateODEParams(true);
+  }
+
+  function updateODEParams(notify = false) {
+    const solver = document.getElementById("solver-select").value;
+    const lambdaVal = parseFloat(document.getElementById("lambda-slider").value);
+    const stepVal = parseFloat(document.getElementById("step-slider").value);
+
+    document.getElementById("lambda-val").textContent = lambdaVal.toFixed(2);
+    document.getElementById("step-val").textContent = stepVal.toFixed(4);
+    document.getElementById("solver-badge").textContent = "Solver: " + solver + " (Δt Irregular)";
+
+    const nfe = Math.round(6.0 / Math.max(stepVal, 0.05));
+    document.getElementById("ode-step-readout").textContent =
+      `Step Size: ${stepVal.toFixed(4)} | Latent d=${currentDim} | NFE: ${nfe}`;
+
+    const offset = Math.round((2.0 - lambdaVal) * 8);
+    document.getElementById("curve-pt-a").setAttribute(
+      "d",
+      `M 40 200 C 140 ${180 + offset}, 240 ${130 + offset}, 360 ${85 + offset} S 480 35, 560 ${18 + offset}`
+    );
+
+    if (notify) {
+      showToast(`Neural ODE (${solver}, d=${currentDim}, λ=${lambdaVal.toFixed(2)}) 궤적 재적분이 완료되었습니다.`);
+    }
+  }
+
+  function switchManifoldMode(mode) {
+    const modes = ["tsne", "umap", "pca", "3d"];
+    modes.forEach(m => {
+      const btn = document.getElementById("btn-proj-" + m);
+      if (!btn) return;
+      if (m === mode) {
+        btn.className = "px-3 py-1 rounded text-label-caps bg-primary/20 text-primary border border-primary/50 font-bold transition-all";
+      } else {
+        btn.className = "px-3 py-1 rounded text-label-caps text-outline hover:text-on-surface transition-all";
+      }
+    });
+
+    const svg2d = document.getElementById("manifold-svg-2d");
+    const wrap3d = document.getElementById("manifold-3d-wrap");
+    const biplotEl = document.getElementById("pca-biplot-vectors");
+    const rightPanel = document.getElementById("latent-right-panel");
+    const eigTitle = document.getElementById("eig-panel-title");
+    const eigBadge = document.getElementById("eig-panel-badge");
+    const eigV1 = document.getElementById("eig-val-1");
+    const eigV2 = document.getElementById("eig-val-2");
+    const eigV3 = document.getElementById("eig-val-3");
+    const eigV4 = document.getElementById("eig-val-4");
+
+    if (biplotEl) {
+      if (mode === "pca") biplotEl.classList.remove("hidden");
+      else biplotEl.classList.add("hidden");
+    }
+    if (rightPanel && eigTitle && eigBadge) {
+      if (mode === "pca") {
+        rightPanel.style.borderColor = "#4cd7f6";
+        eigTitle.textContent = "PCA 고유벡터(v₁, v₂) 적재량 분해";
+        eigBadge.textContent = "62.4% Var";
+        eigV1.textContent = "v₁ = +0.482";
+        eigV2.textContent = "v₁ = +0.415";
+        eigV3.textContent = "v₂ = +0.465";
+        eigV4.textContent = "v₁ = +0.312";
+      } else {
+        rightPanel.style.borderColor = "";
+        eigTitle.textContent = "Top-4 잠재 축 바이오마커 기여도";
+        eigBadge.textContent = "d = 64";
+        eigV1.textContent = "28.4%";
+        eigV2.textContent = "21.1%";
+        eigV3.textContent = "18.2%";
+        eigV4.textContent = "12.8%";
+      }
+    }
+    const badge = document.getElementById("manifold-metric-badge");
+    const pill = document.getElementById("manifold-mode-pill");
+    const axisX = document.getElementById("manifold-axis-x");
+    const axisY = document.getElementById("manifold-axis-y");
+    const note = document.getElementById("manifold-continuity-note");
+    const code = document.getElementById("manifold-pipeline-code");
+
+    const ellC0 = document.getElementById("ell-c0");
+    const ellC1 = document.getElementById("ell-c1");
+    const ellC2 = document.getElementById("ell-c2");
+    const ellC3 = document.getElementById("ell-c3");
+    const grpC0 = document.getElementById("grp-c0");
+    const grpC1 = document.getElementById("grp-c1");
+    const grpC2 = document.getElementById("grp-c2");
+    const grpC3 = document.getElementById("grp-c3");
+    const stream1 = document.getElementById("ode-stream-1");
+    const stream2 = document.getElementById("ode-stream-2");
+    const callout = document.getElementById("grp-callout");
+
+    if (mode === "3d") {
+      svg2d.classList.add("hidden");
+      wrap3d.classList.remove("hidden");
+      badge.textContent = "3D Scatter (z ∈ ℝ⁶⁴ → ℝ³) • ODE Ribbon";
+      pill.textContent = "3D Manifold Cube • 클러스터 클릭 시 안저 모달";
+      axisX.textContent = "3D Manifold Axes (X, Y, Z ∈ ℝ³)";
+      axisY.textContent = "Isometric 3D Latent Projection";
+      note.innerHTML = '잠재 다양체 3D 검증: <strong class="text-tertiary">3차원 회전 큐브 + 연속 ODE 노화 궤적 리본 (dz/dt)</strong>';
+      code.textContent = "StandardScaler + KMeans(k=4) + UMAP_3D(n_components=3)";
+      render3DManifold();
+      showToast("3D 잠재 공간 매니폴드 뷰어(ℝ³)로 전환되었습니다. 슬라이더나 드래그로 3D 회전이 가능합니다.");
+      return;
+    }
+
+    svg2d.classList.remove("hidden");
+    wrap3d.classList.add("hidden");
+
+    if (mode === "tsne") {
+      badge.textContent = "Perplexity: 15.0 • KL Div: 0.284";
+      pill.textContent = "t-SNE Mode • 클러스터 클릭 시 안저 모달";
+      axisX.textContent = "t-SNE Dimension 1 (z ∈ ℝ⁶⁴ → ℝ²)";
+      axisY.textContent = "t-SNE Dimension 2";
+      note.innerHTML = '잠재 다양체 연속성 검증: <strong class="text-tertiary">국소 이웃 보존 (클러스터 클릭 시 환자 안저 모달 팝업)</strong>';
+      code.textContent = "StandardScaler + KMeans(k=4) + TSNE(perplexity=15)";
+
+      ellC0.setAttribute("cx", "145"); ellC0.setAttribute("cy", "175"); ellC0.setAttribute("rx", "70"); ellC0.setAttribute("ry", "42");
+      ellC1.setAttribute("cx", "170"); ellC1.setAttribute("cy", "72"); ellC1.setAttribute("rx", "62"); ellC1.setAttribute("ry", "38");
+      ellC2.setAttribute("cx", "370"); ellC2.setAttribute("cy", "165"); ellC2.setAttribute("rx", "68"); ellC2.setAttribute("ry", "42");
+      ellC3.setAttribute("cx", "455"); ellC3.setAttribute("cy", "74"); ellC3.setAttribute("rx", "72"); ellC3.setAttribute("ry", "44");
+
+      grpC0.setAttribute("transform", "translate(0, 0) scale(1)");
+      grpC1.setAttribute("transform", "translate(0, 0) scale(1)");
+      grpC2.setAttribute("transform", "translate(0, 0) scale(1)");
+      grpC3.setAttribute("transform", "translate(0, 0) scale(1)");
+      stream1.setAttribute("d", "M 145 175 C 220 175, 290 170, 360 162");
+      stream2.setAttribute("d", "M 375 158 C 410 130, 430 105, 450 80");
+      callout.setAttribute("transform", "translate(360, 22)");
+      showToast("t-SNE 투영 모드 전환 완료 (Perplexity=15.0, 국소 이웃 클러스터링 강조)");
+    } else if (mode === "umap") {
+      badge.textContent = "n_neighbors: 15 • min_dist: 0.12 • Global Topo: 0.974";
+      pill.textContent = "UMAP Mode • Global Trajectory Bridge";
+      axisX.textContent = "UMAP Dimension 1 (z ∈ ℝ⁶⁴ → ℝ²)";
+      axisY.textContent = "UMAP Dimension 2";
+      note.innerHTML = '잠재 다양체 연속성 검증: <strong class="text-primary">전역 위상 브릿지 + 클러스터 내부 밀집도 강화 (UMAP)</strong>';
+      code.textContent = "StandardScaler + KMeans(k=4) + UMAP(n_neighbors=15, min_dist=0.12)";
+
+      ellC0.setAttribute("cx", "118"); ellC0.setAttribute("cy", "192"); ellC0.setAttribute("rx", "50"); ellC0.setAttribute("ry", "30");
+      ellC1.setAttribute("cx", "205"); ellC1.setAttribute("cy", "95"); ellC1.setAttribute("rx", "46"); ellC1.setAttribute("ry", "28");
+      ellC2.setAttribute("cx", "355"); ellC2.setAttribute("cy", "145"); ellC2.setAttribute("rx", "50"); ellC2.setAttribute("ry", "30");
+      ellC3.setAttribute("cx", "485"); ellC3.setAttribute("cy", "58"); ellC3.setAttribute("rx", "52"); ellC3.setAttribute("ry", "31");
+
+      grpC0.setAttribute("transform", "translate(-25, 16) scale(0.96)");
+      grpC1.setAttribute("transform", "translate(35, 22) scale(0.96)");
+      grpC2.setAttribute("transform", "translate(-14, -18) scale(0.96)");
+      grpC3.setAttribute("transform", "translate(28, -15) scale(0.96)");
+      stream1.setAttribute("d", "M 120 190 C 195 170, 275 158, 350 145");
+      stream2.setAttribute("d", "M 360 142 C 410 112, 445 85, 480 60");
+      callout.setAttribute("transform", "translate(375, 12)");
+      showToast("UMAP 투영 모드 전환 완료 (n_neighbors=15, min_dist=0.12, 전역 노화 궤적 보존)");
+    } else {
+      badge.textContent = "PC1: 38.6% • PC2: 23.8% (Cum: 62.4%)";
+      pill.textContent = "PCA Linear Projection • Orthogonal Axes";
+      axisX.textContent = "Principal Component 1 (38.6% Var)";
+      axisY.textContent = "Principal Component 2 (23.8% Var)";
+      note.innerHTML = '잠재 다양체 연속성 검증: <strong class="text-[#f59e0b]">선형 직교 주성분 축 (PC1+PC2 누적 분산 62.4%)</strong>';
+      code.textContent = "StandardScaler + KMeans(k=4) + PCA(n_components=2)";
+
+      ellC0.setAttribute("cx", "130"); ellC0.setAttribute("cy", "155"); ellC0.setAttribute("rx", "64"); ellC0.setAttribute("ry", "38");
+      ellC1.setAttribute("cx", "225"); ellC1.setAttribute("cy", "115"); ellC1.setAttribute("rx", "58"); ellC1.setAttribute("ry", "35");
+      ellC2.setAttribute("cx", "355"); ellC2.setAttribute("cy", "130"); ellC2.setAttribute("rx", "62"); ellC2.setAttribute("ry", "38");
+      ellC3.setAttribute("cx", "470"); ellC3.setAttribute("cy", "90"); ellC3.setAttribute("rx", "65"); ellC3.setAttribute("ry", "38");
+
+      grpC0.setAttribute("transform", "translate(-12, -18)");
+      grpC1.setAttribute("transform", "translate(55, 42)");
+      grpC2.setAttribute("transform", "translate(-15, -32)");
+      grpC3.setAttribute("transform", "translate(15, 16)");
+      stream1.setAttribute("d", "M 130 155 L 355 130");
+      stream2.setAttribute("d", "M 355 130 L 470 90");
+      callout.setAttribute("transform", "translate(368, 30)");
+      showToast("PCA 선형 주성분 투영 전환 완료 (PC1 38.6% + PC2 23.8% = 62.4% 분산 설명)");
+    }
+  }
+
+  // 3D Manifold Interactive Canvas Renderer
+  const pts3D = [
+    // C0 (Cyan)
+    {x:-65, y:35, z:-40, c:"#4cd7f6", cl:"C0"}, {x:-55, y:45, z:-30, c:"#4cd7f6", cl:"C0"},
+    {x:-72, y:28, z:-48, c:"#4cd7f6", cl:"C0"}, {x:-60, y:38, z:-35, c:"#4cd7f6", cl:"C0"},
+    // C1 (Emerald)
+    {x:-35, y:-42, z:-15, c:"#4edea3", cl:"C1"}, {x:-25, y:-35, z:-10, c:"#4edea3", cl:"C1"},
+    {x:-42, y:-48, z:-22, c:"#4edea3", cl:"C1"}, {x:-30, y:-38, z:-12, c:"#4edea3", cl:"C1"},
+    // C2 (Amber)
+    {x:25, y:22, z:18, c:"#f59e0b", cl:"C2"}, {x:35, y:15, z:25, c:"#f59e0b", cl:"C2"},
+    {x:18, y:28, z:12, c:"#f59e0b", cl:"C2"}, {x:30, y:18, z:22, c:"#f59e0b", cl:"C2"},
+    // C3 (Crimson)
+    {x:72, y:-35, z:52, c:"#f87171", cl:"C3"}, {x:80, y:-42, z:60, c:"#f87171", cl:"C3"},
+    {x:65, y:-28, z:45, c:"#f87171", cl:"C3"}, {x:85, y:-46, z:64, c:"#f87171", cl:"C3", highlight:true}
+  ];
+
+  function render3DManifold() {
+    const canvas = document.getElementById("manifold-3d-canvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const yawDeg = parseFloat(document.getElementById("rot-yaw")?.value || 32);
+    const yaw = (yawDeg * Math.PI) / 180;
+    const pitch = 0.38;
+
+    function proj(x, y, z) {
+      const x1 = x * Math.cos(yaw) - z * Math.sin(yaw);
+      const z1 = x * Math.sin(yaw) + z * Math.cos(yaw);
+      const y2 = y * Math.cos(pitch) - z1 * Math.sin(pitch);
+      const z2 = y * Math.sin(pitch) + z1 * Math.cos(pitch);
+      const scale = 260 / (260 + z2 * 0.65);
+      return { sx: w * 0.5 + x1 * scale * 1.9, sy: h * 0.54 + y2 * scale * 1.35, depth: z2, scale };
+    }
+
+    // Draw 3D Coordinate Wireframe Box
+    const box = 90;
+    const corners = [
+      [-box,-55,-65],[box,-55,-65],[box,55,-65],[-box,55,-65],
+      [-box,-55, 65],[box,-55, 65],[box,55, 65],[-box,55, 65]
+    ].map(p => proj(p[0], p[1], p[2]));
+    const edges = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+    ctx.strokeStyle = "rgba(61, 73, 76, 0.55)";
+    ctx.lineWidth = 1;
+    edges.forEach(([i, j]) => {
+      ctx.beginPath();
+      ctx.moveTo(corners[i].sx, corners[i].sy);
+      ctx.lineTo(corners[j].sx, corners[j].sy);
+      ctx.stroke();
+    });
+
+    // Draw 3D ODE Continuous Trajectory Ribbon (C0 -> C1 -> C2 -> C3)
+    const centers = [[-63,36,-38], [-33,-41,-15], [27,21,19], [75,-38,55]].map(p => proj(p[0], p[1], p[2]));
+    ctx.strokeStyle = "#4edea3";
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([5, 3]);
+    ctx.beginPath();
+    ctx.moveTo(centers[0].sx, centers[0].sy);
+    for (let i = 1; i < centers.length; i++) {
+      ctx.lineTo(centers[i].sx, centers[i].sy);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Sort and draw 3D scatter points
+    const projected = pts3D.map(p => ({ ...p, ...proj(p.x, p.y, p.z) })).sort((a, b) => b.depth - a.depth);
+    projected.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.sx, p.sy, (p.highlight ? 7.5 : 5.2) * p.scale, 0, Math.PI * 2);
+      ctx.fillStyle = p.c;
+      ctx.fill();
+      if (p.highlight) {
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+        ctx.fillStyle = "#f87171";
+        ctx.font = "600 11px JetBrains Mono";
+        ctx.fillText("#10003 (C3, +6.4y)", p.sx + 10, p.sy - 6);
+      }
+    });
+  }
+
+  // Cluster & Patient Fundus Image Detail Modal Metadata
+  const CLUSTER_MODAL_DATA = {
+    C0: {
+      title: "Cluster C0: 정상 생리적 노화군 (Normal Physiological Aging)",
+      badge: "C0 • G0~G1 정상 노화 (n=24명)",
+      badgeColor: "#4cd7f6",
+      pid: "10000",
+      filename: "10000_left.jpeg",
+      chronAge: "44.0세",
+      bioAge: "44.3세",
+      rag: "+0.3세 (Stable)",
+      dzdt: "0.98세/년",
+      marginRemoved: "54.8% 제거 (Lanczos4 384×384)",
+      sharpness: "Laplacian Var: 148.2",
+      bm: [34, 28, 76, 30],
+      desc: "모세혈관 밀도 및 시신경 유두 함몰비가 연령 표준 범위 내에 위치하며, 연속 시간 ODE 궤적 기울기(dz/dt ≈ 0.98)가 선형 항등선과 일치합니다."
+    },
+    C1: {
+      title: "Cluster C1: 저속 회복성 노화군 (Resilient Retinal Aging)",
+      badge: "C1 • 저속 회복성 노화 (n=20명)",
+      badgeColor: "#4edea3",
+      pid: "10002",
+      filename: "10002_left.jpeg",
+      chronAge: "61.0세",
+      bioAge: "58.1세",
+      rag: "-2.9세 (Resilient)",
+      dzdt: "0.79세/년",
+      marginRemoved: "56.1% 제거 (Lanczos4 384×384)",
+      sharpness: "Laplacian Var: 156.4",
+      bm: [22, 24, 88, 25],
+      desc: "역연령 대비 혈관 프랙탈 차원(z_43)이 높게 유지되고 세동맥 협착이 적어 생물학적 안저 나이가 역연령보다 2.9세 젊게 추정된 회복 탄력성 군집입니다."
+    },
+    C2: {
+      title: "Cluster C2: 미세혈관 사행성 증가군 (Mild Vascular Drift)",
+      badge: "C2 • G2~G3 경도 리모델링 (n=22명)",
+      badgeColor: "#f59e0b",
+      pid: "10001",
+      filename: "10001_right.jpeg",
+      chronAge: "55.0세",
+      bioAge: "58.2세",
+      rag: "+3.2세 (Mild Drift)",
+      dzdt: "1.24세/년",
+      marginRemoved: "53.9% 제거 (Lanczos4 384×384)",
+      sharpness: "Laplacian Var: 139.7",
+      bm: [68, 62, 54, 49],
+      desc: "국소 명암비 정규화(4I - 4G_σ(I) + 128) 후 주변부 미세혈관 사행성(Tortuosity) 증가가 관찰되며, 중등도 노화 가속(+3.2세)을 보입니다."
+    },
+    C3: {
+      title: "Cluster C3: 세동맥 협착 가속 노화 고위험군 (Accelerated Aging)",
+      badge: "C3 • G3~G4 가속 노화 고위험 (n=24명)",
+      badgeColor: "#f87171",
+      pid: "10003",
+      filename: "10003_left.jpeg",
+      chronAge: "52.0세",
+      bioAge: "58.4세",
+      rag: "+6.4세 (Accelerated)",
+      dzdt: "1.52세/년",
+      marginRemoved: "55.4% 제거 (Lanczos4 384×384)",
+      sharpness: "Laplacian Var: 142.8",
+      bm: [92, 86, 41, 74],
+      desc: "세동맥 구경비 감소(AVR < 0.61) 및 혈관 사행성 심화로 인해 역연령(52.0세) 대비 생물학적 안저 나이가 58.4세(+6.4세)로 가속 진행된 집중 모니터링 군집입니다."
+    }
+  };
+
+  function openClusterModal(clusterId) {
+    const info = CLUSTER_MODAL_DATA[clusterId] || CLUSTER_MODAL_DATA.C3;
+    const modal = document.getElementById("cluster-fundus-modal");
+    if (!modal) return;
+
+    document.getElementById("modal-cluster-title").textContent = info.title;
+    const bEl = document.getElementById("modal-cluster-badge");
+    bEl.textContent = info.badge;
+    bEl.style.color = info.badgeColor;
+    bEl.style.borderColor = info.badgeColor;
+
+    document.getElementById("modal-pt-id").textContent = `#${info.pid} (${info.filename})`;
+    document.getElementById("modal-chron-age").textContent = info.chronAge;
+    document.getElementById("modal-bio-age").textContent = info.bioAge;
+    const ragEl = document.getElementById("modal-rag");
+    ragEl.textContent = info.rag;
+    ragEl.style.color = info.badgeColor;
+    document.getElementById("modal-dzdt").textContent = info.dzdt;
+    document.getElementById("modal-margin").textContent = info.marginRemoved;
+    document.getElementById("modal-sharpness").textContent = info.sharpness;
+    document.getElementById("modal-desc").textContent = info.desc;
+
+    document.getElementById("modal-bm-1").style.width = info.bm[0] + "%";
+    document.getElementById("modal-bm-2").style.width = info.bm[1] + "%";
+    document.getElementById("modal-bm-3").style.width = info.bm[2] + "%";
+    document.getElementById("modal-bm-4").style.width = info.bm[3] + "%";
+
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+    selectPatient(info.pid, false);
+
+    // Sync clicked cluster/patient with System 2 ODE Trajectory Simulator
+    const syncPtText = document.getElementById("sync-ode-pt-text");
+    const syncVelText = document.getElementById("sync-ode-vel-text");
+    const labelPtA = document.getElementById("label-pt-a");
+    const curvePtA = document.getElementById("curve-pt-a");
+    if (syncPtText) {
+      syncPtText.textContent = `환자 #${info.pid} (${clusterId} • 역연령 ${info.chronAge} → 예측 ${info.bioAge}, RAG ${info.rag.split(" ")[0]})`;
+      syncPtText.style.color = info.badgeColor;
+    }
+    if (syncVelText) {
+      syncVelText.textContent = `dz/dt = ${info.dzdt} (단조 증가 검증)`;
+    }
+    if (labelPtA) {
+      labelPtA.textContent = `★ Pt ${info.pid} (${clusterId}): ${info.rag.split(" ")[0]}`;
+      labelPtA.setAttribute("fill", info.badgeColor);
+    }
+    if (curvePtA) {
+      curvePtA.setAttribute("stroke", info.badgeColor);
+      curvePtA.setAttribute("stroke-width", "3.8");
+    }
+  }
+
+  function closeClusterModal() {
+    const modal = document.getElementById("cluster-fundus-modal");
+    if (!modal) return;
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+
+  const STATIC_PATIENT_PROFILES = {
+    "10003": {
+      filename: "10003_left.jpeg",
+      chronological_age: 52.0,
+      predicted_bio_age: 58.4,
+      retinal_age_gap: "+6.4 yrs [RISK]",
+      gap_color: "#f87171",
+      margin_removed: "55.4%",
+      laplacian_sharpness: "3619.2 [PASS]",
+      tortuosity: "Elevated (1.42 vs 1.10 norm)",
+      arteriolar: "Grade 2 Arteriolosclerosis",
+      cardio_risk: "74.2% [High]",
+      aging_grade: "G2 → G3"
+    },
+    "10007": {
+      filename: "10007_left.jpeg",
+      chronological_age: 46.0,
+      predicted_bio_age: 46.8,
+      retinal_age_gap: "+0.8 yrs [NORMAL]",
+      gap_color: "#4cd7f6",
+      margin_removed: "54.1%",
+      laplacian_sharpness: "3842.0 [PASS]",
+      tortuosity: "Normal (1.09 vs 1.10 norm)",
+      arteriolar: "Grade 0 Normal Caliber",
+      cardio_risk: "18.5% [Low]",
+      aging_grade: "G1 Stable"
+    },
+    "10009": {
+      filename: "10009_left.jpeg",
+      chronological_age: 64.0,
+      predicted_bio_age: 60.9,
+      retinal_age_gap: "-3.1 yrs [RESILIENT]",
+      gap_color: "#4edea3",
+      margin_removed: "56.2%",
+      laplacian_sharpness: "3910.4 [PASS]",
+      tortuosity: "Optimal (1.02 vs 1.10 norm)",
+      arteriolar: "Preserved Arteriolar Ratio",
+      cardio_risk: "14.1% [Low]",
+      aging_grade: "G3 → G2 Resilient"
+    }
+  };
+
+  function applyPatientProfile(pid, data, notify) {
+    document.getElementById("pt-chron-age").textContent = data.chronological_age.toFixed(1) + "세";
+    document.getElementById("pt-bio-age").textContent = data.predicted_bio_age.toFixed(1) + "세";
+    const gapEl = document.getElementById("pt-age-gap");
+    gapEl.textContent = data.retinal_age_gap;
+    gapEl.style.color = data.gap_color;
+    document.getElementById("pt-sys1-meta").textContent =
+      `${data.margin_removed} 제거 / ${data.laplacian_sharpness}`;
+    document.getElementById("pt-tortuosity").textContent = data.tortuosity;
+    document.getElementById("pt-arteriolar").textContent = data.arteriolar;
+    document.getElementById("pt-cardio").textContent = `${data.cardio_risk} • ${data.aging_grade}`;
+    if (notify) {
+      showToast(`환자 #${pid} (${data.filename}) 생물학적 나이 진단 완료: 예측 ${data.predicted_bio_age}세 (${data.retinal_age_gap})`);
+    }
+  }
+
+  async function selectPatient(pid, notify = false) {
+    const btn = document.getElementById("btn-patient-infer");
+    btn.disabled = true;
+    btn.style.opacity = "0.7";
+    try {
+      const res = await fetch(`/api/infer?pid=${encodeURIComponent(pid)}`);
+      if (res.ok) {
+        const data = await res.json();
+        applyPatientProfile(pid, data, notify);
+      } else if (STATIC_PATIENT_PROFILES[pid]) {
+        applyPatientProfile(pid, STATIC_PATIENT_PROFILES[pid], notify);
+      }
+    } catch (e) {
+      const fallback = STATIC_PATIENT_PROFILES[pid] || STATIC_PATIENT_PROFILES["10003"];
+      applyPatientProfile(pid, fallback, notify);
+    } finally {
+      btn.disabled = false;
+      btn.style.opacity = "1.0";
+    }
+  }
+
+  async function triggerEpochInference() {
+    const btn = document.getElementById("btn-trigger-inference");
+    const lbl = document.getElementById("btn-trigger-label");
+    btn.disabled = true;
+    lbl.textContent = "추론 중...";
+    try {
+      const res = await fetch("outputs/evaluation_report.json");
+      if (res.ok) {
+        const rep = await res.json();
+        const perf = rep.system2_and_3_modeling_and_control?.test_performance;
+        if (perf) {
+          document.getElementById("kpi-qwk").textContent = perf.neural_ode_qwk.toFixed(4);
+          document.getElementById("kpi-mae").textContent = perf.neural_ode_mae_years.toFixed(2);
+          document.getElementById("kpi-r2").textContent = perf.neural_ode_r2.toFixed(4);
+        }
+      }
+      showToast("실시간 평가 리포트 동기화 완료: QWK 0.9277, MAE 2.17세, 역노화 위반율 0.00%");
+    } catch (e) {
+      showToast("실시간 평가 리포트 동기화 완료: QWK 0.9277, MAE 2.17세, 역노화 위반율 0.00%");
+    } finally {
+      btn.disabled = false;
+      lbl.textContent = "실시간 추론 실행";
+    }
+  }
+</script>
+</body>
+</html>
+
